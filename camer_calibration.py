@@ -30,8 +30,6 @@ pipe_profile=pipeline.start(config)
 # ('https://bit.ly/3nQTprF')
 #Intrinsic Parameters- Main one to develop code[2] 
 #('https://bit.ly/3j034bX')
-# Camera Calibration [3]
-#'https://nikatsanka.github.io/camera-calibration-using-opencv-and-python.html'
 
 try:
     while  True:
