@@ -1,9 +1,7 @@
-## License: Apache 2.0. See LICENSE file in root directory.
-## Copyright(c) 2015-2017 Intel Corporation. All Rights Reserved.
+############## Camera Calibration##########################
 
-###############################################
-##      Open CV and Numpy integration        ##
-###############################################
+#purpose: Obtain intrnsic camera parameters 
+
 # Resources:
 # Intrinsic Parameters-  Resource[1] 
 # ('https://bit.ly/3nQTprF')
@@ -12,20 +10,13 @@
 # Camera Calibration [3]
 #'https://nikatsanka.github.io/camera-calibration-using-opencv-and-python.html'
 
-
-
-
 import pyrealsense2 as rs
 import numpy as np
 import cv2
 import glob
 import keyboard 
 
-# removed testing
-dirpath= r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
-#squaresize is in meters
 
-#def drawchessboard(dirpath, prefix='Image', image_format='png',width,height,squaresize):
 def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -87,13 +78,13 @@ def save_coefficients(mtx, dist, dirpath):
     # note you *release* you don't close() a FileStorage object
     cv_file.release()
 
-def undistort(stat_images,mtx,dist):
+#def undistort(stat_images,mtx,dist):
     #count=1
     #for fname in stat_images:
         #img = cv2.imread(fname)
         #h,w=stat_images.shape[:2]
         #newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-        #dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+        #dst = cv2.undistort(ismg, mtx, dist, None, newcameramtx)
         
         # crop the image
         #x,y,w,h = roi
@@ -102,14 +93,17 @@ def undistort(stat_images,mtx,dist):
         #cv2.imwrite('calibresult'+countstr+'.png',dst)
         #count+=1
 
-# Configure depth and color streams
 
+#Initialize directory path
+dirpath = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
+
+# Configure depth and color streams
 pipeline = rs.pipeline()
 config = rs.config()
 fps=30
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, fps)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, fps)
-
+#Initiate a counter for the number of images captured
 count=0
 # Start streaming
 pipeline.start(config)
