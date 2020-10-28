@@ -9,6 +9,9 @@
 #('https://bit.ly/3j034bX')
 # Camera Calibration [3]
 #'https://nikatsanka.github.io/camera-calibration-using-opencv-and-python.html'
+#OpenCVPtyhon Tutorials: Camera Calibration and 3D Reconstruction
+#'https://docs.opencv.org/master/dc/dbb/tutorial_py_calibration.html'
+
 
 import pyrealsense2 as rs
 import numpy as np
@@ -64,8 +67,8 @@ def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
     # Get camera matrix, distortion coefficients, rotation and translation vector.  
     rms, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
     
-    #undistort
-    ####undistort(stat_images,mtx,dist)
+    #undistort (Added 28.10.2020)
+    undistort(stat_images,mtx,dist)
     return [rms, mtx, dist, rvecs, tvecs, stat_images]
 
     #cv2.destroyAllWindows()
@@ -78,20 +81,35 @@ def save_coefficients(mtx, dist, dirpath):
     # note you *release* you don't close() a FileStorage object
     cv_file.release()
 
-#def undistort(stat_images,mtx,dist):
-    #count=1
-    #for fname in stat_images:
-        #img = cv2.imread(fname)
-        #h,w=stat_images.shape[:2]
-        #newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-        #dst = cv2.undistort(ismg, mtx, dist, None, newcameramtx)
+def undistort(stat_images,mtx,dist):
+    count=1
+    for fname in stat_images:
+        img = cv2.imread(fname)
+        #3 Get dimensions of image: get widwth and heigh
+        h,w=img.shape[:2] 
         
-        # crop the image
-        #x,y,w,h = roi
-        #dst = dst[y:y+h, x:x+w]
-        #countstr=str(countstr)
-        #cv2.imwrite('calibresult'+countstr+'.png',dst)
-        #count+=1
+        ### overview of parameters
+        #ROI: Rectongular region of interest in Open CV
+        # cv.getOptimalNewCameraMatrix(	cameraMatrix, distCoeffs, imageSize, alpha[, newImgSize[, centerPrincipalPoint]])
+        #alpha=1 when all the source image pixels are retained in the undistorted image). See stereoRectify for details.
+        #alpha=1 means that the rectified image is decimated and shifted so that all the pixels from the original images 
+        # from the cameras are retained in the rectified images (no source image pixels are lost). Any intermediate value yields an intermediate result between those two extreme cases.
+
+        newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+        
+        #undistort 
+        dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+        
+        #crop the image
+        
+        #x,y are top left coordinates / #y+h are the bottom left coordinates / #x+w are the top right coordinates
+        #Define the ROI 
+        x,y,w,h = roi
+        #crop image to only the specified bounds 
+        dst = dst[y:y+h, x:x+w]
+        countstr=str(count)
+        cv2.imwrite('calibresult'+countstr+'.png',dst)
+        count+=1
 
 
 #Initialize directory path
