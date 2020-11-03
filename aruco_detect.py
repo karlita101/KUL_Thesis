@@ -11,20 +11,16 @@ import pyrealsense2 as rs
  #Source 3
  #'https://docs.opencv.org/master/d9/d6a/group__aruco.html#gab9159aa69250d8d3642593e508cb6baa'
  
- 
- 
- 
+
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
 #myLoadedData = cv2.Load(path)
 param = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
 camera_matrix = param.getNode("K").mat()
 dist_coef = param.getNode("D").mat()
-#print (fn.mat())
+#numpy.mat turns it into a matrix
 
  
- 
-# Find and decode arucomarkers
 
 # Create a pipeline
 pipeline = rs.pipeline() 
@@ -47,10 +43,6 @@ align = rs.align(align_to)
 
 #Calll aruco dictionary
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
-
-
-
-
 
 # Streaming loop
 try:
@@ -77,15 +69,38 @@ try:
         gray_image=cv2.cvtColor(color_image,cv2.COLOR_BGR2GRAY)
         
  
-        #ARUCO [Source 1,2,3]
+        #Detect Aruco 
         arucoParameters = aruco.DetectorParameters_create()
         corners, ids, rejectedImgPoints = aruco.detectMarkers(gray_image, aruco_dict, parameters=arucoParameters, cameraMatrix=camera_matrix, distCoeff=dist_coef)
-
-        
-        
         color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
         
-       
+        #ids : ndarray
+        #corners: list
+        print("ids",ids)
+        print(corners)
+        
+        #Estimate Pose
+        markerlen=3.19/100 #m
+        axis_len=0.01
+        
+        #Test whether all array elements along a given axis evaluate to True.
+        if np.all(ids != None):
+            for i in range(0,len(ids)):
+                print(i)
+                rvec, tvec, markerPoints = aruco.estimatePoseSingleMarkers(corners[i], markerlen,camera_matrix,dist_coef)
+                #print(rvec)
+                #print("tvec")
+                #print(tvec)
+                #depth=sqrt(sum([ d**2 for d in tvec]))
+                
+                #Here we get rve and tvec as a (1,1,3) shape. Why?
+                #rvec: numpy ndarray
+                ##rvec is the rotation of the marker relative to the camera frame.
+                #tvec:numpy ndarray
+                
+                #Draw  axes
+                aruco.drawAxis(color_image, camera_matrix, dist_coef, rvec, tvec, axis_len)  
+
         #make depth image of similar structure as color_images
         depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) 
 
