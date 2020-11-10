@@ -2,7 +2,9 @@ import numpy as np
 import cv2
 import cv2.aruco as aruco
 import pyrealsense2 as rs
- 
+import itertools as iter
+
+from relativepose import *
  
  #source 1
  #'https://medium.com/@muralimahadev40/aruco-markers-usage-in-computer-vision-using-opencv-python-cbdcf6ff5172'
@@ -11,6 +13,14 @@ import pyrealsense2 as rs
  #Source 3
  #'https://docs.opencv.org/master/d9/d6a/group__aruco.html#gab9159aa69250d8d3642593e508cb6baa'
  
+def combpairs(markerids):
+    #create indices for the marker ids
+    #output pairs of possible id marker combinations using the N choose K tool in itertools 
+    indices=[*range(len(markerids))]
+    comb=list(itertools.combinations(range(len(markerids)), 2))
+    print(comb)
+    return comb
+
 
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -20,7 +30,6 @@ camera_matrix = param.getNode("K").mat()
 dist_coef = param.getNode("D").mat()
 #numpy.mat turns it into a matrix
 
- 
 
 # Create a pipeline
 pipeline = rs.pipeline() 
@@ -31,8 +40,6 @@ pipeline = rs.pipeline()
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30) #16 bit linear depth values
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30) #8 bit bgr
-    # Note: I thought that direct grayscale stream woould be useful  but it would be best to  only gray scale for identification and show rgb stream
-    #config.enable_stream(rs.stream.color, 640, 480, rs.format.y16, 30) #16 per  pixel grayscale image
 
 # Start streaming
 profile = pipeline.start(config)
@@ -66,6 +73,7 @@ try:
         #Get depth and RGB Data, and convert RBG to grayscale
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
+        #ARUCO asks for grayscale for the threshold operations
         gray_image=cv2.cvtColor(color_image,cv2.COLOR_BGR2GRAY)
         
  
@@ -85,22 +93,33 @@ try:
         
         #Test whether all array elements along a given axis evaluate to True.
         if np.all(ids != None):
+            #Create empty lists to store values
+            id_Rvec=[]
+            id_tvec=[]
+        
             for i in range(0,len(ids)):
                 print(i)
                 rvec, tvec, markerPoints = aruco.estimatePoseSingleMarkers(corners[i], markerlen,camera_matrix,dist_coef)
+                print('ID marker', ids[i], 'Z-dpeth',tvec[i,1,3])
                 #print(rvec)
                 #print("tvec")
                 #print(tvec)
-                #depth=sqrt(sum([ d**2 for d in tvec]))
                 
                 #Here we get rve and tvec as a (1,1,3) shape. Why?
-                #rvec: numpy ndarray
-                ##rvec is the rotation of the marker relative to the camera frame.
-                #tvec:numpy ndarray
                 
+                #Store Rvec and Tvec  values
+                id_Rvec.append(rvec)
+                id_tvec.append(tvec)
                 #Draw  axes
                 aruco.drawAxis(color_image, camera_matrix, dist_coef, rvec, tvec, axis_len)  
 
+            #Relative pose: use comprehension lists
+            comb=combpairs(ids)
+            R_rel, t_rel =[relativePose(id_rvec[pairs[0]],id_rvec[pair[1]],id_tvec[pairs[0]],id_tvec[pairs[1]])  for pairs in comb]
+            print('Rotation',R_rel,'for pairs', comb)
+            print('translation',t_rel,'for pairs', comb)
+            
+            
         #make depth image of similar structure as color_images
         depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) 
 
