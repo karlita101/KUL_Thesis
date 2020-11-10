@@ -20,12 +20,12 @@ import numpy as np
 def homogeneousInvTransform(rvec,tvec):
     #Input: pose info for marker B
     #Calculate Rotation Matrix R from Rodrigues angles
-    R, _ = cv2.Rodrigues(rvec)
+    R, __ = cv2.Rodrigues(rvec)
     #Need to calculate the inverse. Note that the inverse of a rotation matrix is its transpose
     invRot=np.matrix(R).T
-    invTvec= (np.dot(invRot,np.matrix(-tvec)) 
+    invTvec= (np.dot(invRot,np.matrix(-tvec))) 
     #Return inverse rotation vector
-    inv_rvec , _ = cv2.Rodrigues(invRot)
+    inv_rvec , __ = cv2.Rodrigues(invRot)
     return inv_rvec, inv_tvec
 
 def relativePose(rvec1,rvec2,tvec1,tvec2):
@@ -39,8 +39,12 @@ def relativePose(rvec1,rvec2,tvec1,tvec2):
     inv_rvec, inv_tvec = homogeneousInvTransform(rvec2,tvec2)
     
     #Use cv2.composer RT function to compite two rotation and shift transformations
-    transf = cv2.composeRT(rvec1,tvec1,inv_rvec,inv_tvec)
+    comp_pose  = cv2.composeRT(rvec1, tvec1, inv_rvec, inv_tvec)[:2]
+    
+    r_rel, trel = comp_pose[0], comp_pose[1]
+    
     #reshape
-    r_rel, t_rel = transf[0].reshape((3, 1)), transf[1].reshape((3, 1))
+    ##Rrel, = rel[0].reshape((3, 1))
+    ##trel = rel[1].reshape((3, 1))
 
     return r_rel, t_rel  
