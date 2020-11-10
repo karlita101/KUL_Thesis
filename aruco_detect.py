@@ -30,7 +30,6 @@ camera_matrix = param.getNode("K").mat()
 dist_coef = param.getNode("D").mat()
 #numpy.mat turns it into a matrix
 
-
 # Create a pipeline
 pipeline = rs.pipeline() 
 
