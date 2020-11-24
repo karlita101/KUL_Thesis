@@ -23,7 +23,7 @@ def homogeneousInvTransform(rvec,tvec):
     R, __ = cv2.Rodrigues(rvec)
     #Need to calculate the inverse. Note that the inverse of a rotation matrix is its transpose
     invRot=np.matrix(R).T
-    invTvec= (np.dot(invRot,np.matrix(-tvec))) 
+    inv_tvec= (np.dot(invRot,np.matrix(-tvec))) 
     #Return inverse rotation vector
     inv_rvec , __ = cv2.Rodrigues(invRot)
     return inv_rvec, inv_tvec
@@ -34,17 +34,19 @@ def relativePose(rvec1,rvec2,tvec1,tvec2):
     
     #Source 1 Recommends reshaping
     rvec1, tvec1 = rvec1.reshape((3, 1)), tvec1.reshape((3, 1))
-    rvec2, tvec2 = rvec2.reshape((3, 1)), tvec2.reshape((3, 1)
+    rvec2, tvec2 = rvec2.reshape((3, 1)), tvec2.reshape((3, 1))
                                                         
-    inv_rvec, inv_tvec = homogeneousInvTransform(rvec2,tvec2)
+    inv_rvec= homogeneousInvTransform(rvec2,tvec2)[0]
+    inv_tvec = homogeneousInvTransform(rvec2,tvec2)[1]
     
     #Use cv2.composer RT function to compite two rotation and shift transformations
-    comp_pose  = cv2.composeRT(rvec1, tvec1, inv_rvec, inv_tvec)[:2]
+    r_rel= cv2.composeRT(rvec1, tvec1, inv_rvec, inv_tvec)[0]
+    t_rel = cv2.composeRT(rvec1, tvec1, inv_rvec, inv_tvec)[1]
     
-    r_rel, trel = comp_pose[0], comp_pose[1]
-    
-    #reshape
-    ##Rrel, = rel[0].reshape((3, 1))
-    ##trel = rel[1].reshape((3, 1))
-
     return r_rel, t_rel  
+
+
+def append_rel(comb, id_rvec, id_tvec):
+    r_rel= [[relativePose(id_rvec[pairs[0]], id_rvec[pairs[1]],id_tvec[pairs[0]], id_tvec[pairs[1]])[0]] for pairs in comb]
+    t_rel = [[relativePose(id_rvec[pairs[0]], id_rvec[pairs[1]],id_tvec[pairs[0]], id_tvec[pairs[1]])[1]] for pairs in comb]
+    return r_rel, t_rel

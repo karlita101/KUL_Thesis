@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import cv2.aruco as aruco
 import pyrealsense2 as rs
-import itertools as iter
+import itertools 
 
 from relativepose import *
  
@@ -13,17 +13,22 @@ from relativepose import *
  #Source 3
  #'https://docs.opencv.org/master/d9/d6a/group__aruco.html#gab9159aa69250d8d3642593e508cb6baa'
  
+
 def combpairs(markerids):
     #create indices for the marker ids
-    #output pairs of possible id marker combinations using the N choose K tool in itertools 
-    indices=[*range(len(markerids))]
-    comb=list(itertools.combinations(range(len(markerids)), 2))
-    print(comb)
+    #output pairs of possible id marker combinations using the N choose K tool in itertools
+    indices = [*range(len(markerids))]
+    comb = list(itertools.combinations(range(len(markerids)), 2))
+    #print(comb)
+    #unpack each pair
+    comb = [[*pairs] for pairs in comb]
     return comb
 
 
 #Get Camera Parameters
+#First Calibration
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
+
 #myLoadedData = cv2.Load(path)
 param = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
 camera_matrix = param.getNode("K").mat()
@@ -83,8 +88,8 @@ try:
         
         #ids : ndarray
         #corners: list
-        print("ids",ids)
-        print(corners)
+        print("read ids",ids)
+        #print(corners)
         
         #Estimate Pose
         markerlen=3.19/100 #m
@@ -93,30 +98,39 @@ try:
         #Test whether all array elements along a given axis evaluate to True.
         if np.all(ids != None):
             #Create empty lists to store values
-            id_Rvec=[]
+            id_rvec=[]
             id_tvec=[]
+            id_hold=[]
         
             for i in range(0,len(ids)):
                 print(i)
+                print('corespoinding ID value is', ids[i])
                 rvec, tvec, markerPoints = aruco.estimatePoseSingleMarkers(corners[i], markerlen,camera_matrix,dist_coef)
-                print('ID marker', ids[i], 'Z-dpeth',tvec[i,1,3])
+                #("ID marker", ids[i], "Z-dpeth",tvec[1,1,3])
                 #print(rvec)
-                #print("tvec")
-                #print(tvec)
+                print("tvec")
+                print(tvec)
                 
                 #Here we get rve and tvec as a (1,1,3) shape. Why?
                 
                 #Store Rvec and Tvec  values
-                id_Rvec.append(rvec)
+                id_rvec.append(rvec)
                 id_tvec.append(tvec)
                 #Draw  axes
                 aruco.drawAxis(color_image, camera_matrix, dist_coef, rvec, tvec, axis_len)  
 
+            #print('shape of tvec', np.shape(id_tvec))==> get all arrays. Shape is (length isd, 1, 1,3)
+            
             #Relative pose: use comprehension lists
+            #find possible combinations
             comb=combpairs(ids)
-            R_rel, t_rel =[relativePose(id_rvec[pairs[0]],id_rvec[pair[1]],id_tvec[pairs[0]],id_tvec[pairs[1]])  for pairs in comb]
-            print('Rotation',R_rel,'for pairs', comb)
-            print('translation',t_rel,'for pairs', comb)
+            print(comb)
+            #r_rel, t_rel =[[relativePose(id_rvec[pairs[0]],id_rvec[pairs[1]],id_tvec[pairs[0]],id_tvec[pairs[1]])]  for pairs in comb]
+            #test
+            r_rel,t_rel = append_rel(comb,id_rvec,id_tvec)
+            #
+            print('Relative Rotation',r_rel,'for pairs', comb)
+            print('Relative',t_rel,'for pairs', comb)
             
             
         #make depth image of similar structure as color_images

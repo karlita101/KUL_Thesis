@@ -5,13 +5,16 @@
 # Resources:
 # Intrinsic Parameters-  Resource[1] 
 # ('https://bit.ly/3nQTprF')
-#Intrinsic Parameters- Main one to develop code[2] 
-#('https://bit.ly/3j034bX')
+#Intrinsic Parameters- [2] 
+#https: // medium.com/@aliyasineser/opencv-camera-calibration-e9a48bdd1844
+#==> His code was developed based Open CV tutorial [4] but structures it in the calibration and save coefficients format
+#other wise used his structure
 # Camera Calibration [3]
 #'https://nikatsanka.github.io/camera-calibration-using-opencv-and-python.html'
-#OpenCVPtyhon Tutorials: Camera Calibration and 3D Reconstruction
+#OpenCVPtyhon Tutorials: Camera Calibration and 3D Reconstruction*** MAIN ONE TO DEVELOP CODE [4]
 #'https://docs.opencv.org/master/dc/dbb/tutorial_py_calibration.html'
 
+#('https://bit.ly/3j034bX') ??
 
 import pyrealsense2 as rs
 import numpy as np
@@ -24,7 +27,7 @@ def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    # prepares object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     objp = np.zeros((width*height,3), np.float32)
     objp[:,:2] = np.mgrid[0:width,0:height].T.reshape(-1,2)
 
@@ -85,7 +88,7 @@ def undistort(stat_images,mtx,dist):
     count=1
     for fname in stat_images:
         img = cv2.imread(fname)
-        #3 Get dimensions of image: get widwth and heigh
+        #3 Get dimensions of image: get width and heigh
         h,w=img.shape[:2] 
         
         ### overview of parameters
@@ -113,7 +116,10 @@ def undistort(stat_images,mtx,dist):
 
 
 #Initialize directory path
+
+#First calibration
 dirpath = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
+
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -141,11 +147,7 @@ try:
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         
-        # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-        ##depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
-        # Stack both images horizontally
-        #images = np.hstack((color_image, depth_colormap))
         images = color_image
         
         # Show images
@@ -188,5 +190,4 @@ prefix='Image'
 rms, mtx, dist, rvecs, tvecs, stat_images= drawchessboard(square_size, width, height,dirpath, prefix, image_format)
 
 #Save coefficients
-#save_coefficients(mtx, dist, dirthpath):
 save_coefficients(mtx, dist, dirpath)
