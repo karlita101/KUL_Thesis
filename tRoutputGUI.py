@@ -1,4 +1,3 @@
-
 import tkinter as tk
 
 #Purpose: Create a Ouput GUI for output of Translation and Rotation Vectors
@@ -18,11 +17,11 @@ c=b
 
 rootwindow = tk.Tk()
 rootwindow.title("ARUCO Marker Pose information")
-
+rootwindow.geometry('{}x{}'.format(800, 500))
 
 #Frame 0: IDs
-frame_0 = tk.LabelFrame(rootwindow, borderwidth=2,text="Detected Marker IDs")
-frame_0.pack(side="top",fill="both")
+frame_0 = tk.LabelFrame(rootwindow,text="Detected Marker IDs")
+frame_0.pack(side="top")
 
 #Read IDs
 rids = tk.Text(frame_0)
@@ -31,7 +30,7 @@ rids.pack()
 
 
 #Frame 1: WRT to camera
-frame_1 = tk.LabelFrame(rootwindow, borderwidth=2, text="Pose Vectors: Tranlation+ Rotation")
+frame_1 = tk.LabelFrame(rootwindow, text="Pose Vectors: Tranlation+ Rotation")
 frame_1.pack()
 
 #Translation Vector
