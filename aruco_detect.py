@@ -34,16 +34,19 @@ def stereoRGB_depth(corners):
     #N is number of markers
     #Recall that order of corners are clockwise
     #Get average x and y coordinate for all Nx4 corners
-
+    print('corners',corners)
     #Ensure integer pixels
     x_center= [int(sum([i[0] for i in marker])/4) for N in corners for marker in N]
     y_center = [int(sum([i[1] for i in marker])/4) for N in corners for marker in N]
     center_pixels = list(zip(x_center, y_center))
 
+    ### if too close will get an error because the mean c center 
+    ### is being calculated outside of its boundaries... but that is weird because 
+    #pose estimation finds the center without a proble
     return center_pixels
 
 
-def evalDepth(center_pixels, depth_val, depth_image,id_tvec):
+def evalDepth(center_pixels, depth_val, id_tvec):
     ##INPUTS###
 
     #id_tvec ==> translation vectors for each marker (x,y,z)) * intersted in z only here
@@ -58,15 +61,22 @@ def evalDepth(center_pixels, depth_val, depth_image,id_tvec):
     centerdepth_aruco=[[vect[2] for vect in marker] for N in id_tvec for marker in N]
     print('centerdepth',centerdepth_aruco)
    # Initialize empty lists
-    center_pixels = []
+    #center_pixels = []
     centerdepth_val = []
-    
+
+    print('center pixels',center_pixels)
+
     for pixelset in center_pixels:
         #pixel[0] is x and [1] is y
-        ### NEED TO FIGURE OUT HOW TO ADD THEM ( APPEND)
-        centerdepth_pix.append(depth_image.get_distance(pixelset[0], pixelset[1]))
+        print('xpixel', pixelset[0])
+        print('ypix',pixelset[1])
+        #d=depth_val[pixelset[0]][pixelset[1]]
+        #print(d)
         centerdepth_val.append(depth_val[pixelset[0]][pixelset[1]])
-    return True
+    #error_RGB_depth = [abs(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
+    error_RGB_depth = [(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
+    print('Error',error_RGB_depth)
+    return error_RGB_depth
 
     
     
@@ -182,8 +192,8 @@ try:
             
             ########### Calculate Error Amongst Methods########
             
-            status = evalDepth(center_pixels, depth_val, depth_image, id_tvec)
-            print('status',status)
+            error_RGB_depth = evalDepth(center_pixels, depth_val,id_tvec)
+            print('Percent Error Between RGB and DEPTH ',error_RGB_depth)
             
             
             #############################Relative Aruco Pose#############################
