@@ -26,11 +26,12 @@ frame_0.pack(side="top")
 #Read IDs
 rids = tk.Text(frame_0)
 rids.insert("end",a)
-rids.pack()
+rids.grid(row=0,columnspan=2)
+#rids.pack()
 
 
 #Frame 1: WRT to camera
-frame_1 = tk.LabelFrame(rootwindow, text="Pose Vectors: Tranlation+ Rotation")
+frame_1 = tk.LabelFrame(rootwindow, height=100, text="Pose Vectors: Tranlation+ Rotation")
 frame_1.pack()
 
 #Translation Vector

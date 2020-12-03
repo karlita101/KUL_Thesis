@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 #Input: Extrinsic parpameters to bring points from world to camer coordinate system
 #   Rvec-Rotation vector
 #   tvec-translation vector 
