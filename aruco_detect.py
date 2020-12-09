@@ -1,8 +1,14 @@
+#Author: Karla R. 
+#Sept 2020-
+#Python 3.7 
+
 import numpy as np
 import cv2
 import cv2.aruco as aruco
 import pyrealsense2 as rs
 import itertools 
+import pandas as pd
+import openpyxl
 
 from relativepose import *
  
@@ -33,6 +39,8 @@ def stereoRGB_depth(corners):
     #corners [[Nx4] and their corresponding pixels]
     #N is number of markers
     #Recall that order of corners are clockwise
+    
+    """Averaging"""
     #Get average x and y coordinate for all Nx4 corners
     print('corners',corners)
     #Ensure integer pixels
@@ -45,10 +53,41 @@ def stereoRGB_depth(corners):
     #pose estimation finds the center without a proble
     return center_pixels
 
+#This is INCORRECT##
+"""def center_reprojection(color_image,id_tvec, id_rvec, camera_matrix, dist_coef):
+    #Purpose is to see if a reporjection from world coordinate into 
+    #image plane can locate the centroid of the aruco marker better
+    
+    #mg = cv2.imread('left12.jpg')
+    h,  w = color_image.shape[:2]
+    newcameramtx, roi=cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coef,(w,h),1,(w,h))   
+    
+    #Undistort image
+    dst = cv2.undistort(color_image, camera_matrix, dist_coef, None, newcameramtx)
+    
+    # Projection matrix P=K*RT https://docs.opencv.org/3.4/d0/daf/group__projection.html
+    
+    center_WORLD_image = []
+    
+    for i, center_coord in enumerate(id_tvec):
+        ##result = cv2.projectPoints(center_coord, id_rvec[i], id_tvec[i], camera_matrix, dist_coef)
+        R, __ = cv2.Rodrigues(id_rvec[i])
+        T = center_coord.reshape(3,1)
+        RT = np.c_[R, T]
+        world = np.append(T,1)
+        result = np.matmul(newcameramtx.reshape(3,3),RT)
+        result=np.matmul(result,world)
+        center_WORLD_image.append(result)
+    
+    return center_WORLD_image"""
 
 def evalDepth(center_pixels, depth_val, id_tvec):
+    
+    """Error caused due to centerpixels: Note Dec 7,2020"""
+    """ The center pixels is outputing center pixels that are out of frame"""
+    #Exception has occurred: IndexError index 516 is out of bounds for axis 0 with size 480
+    
     ##INPUTS###
-
     #id_tvec ==> translation vectors for each marker (x,y,z)) * intersted in z only here
     #id_vec is (N,1,1,3)
     
@@ -72,14 +111,17 @@ def evalDepth(center_pixels, depth_val, id_tvec):
         print('ypix',pixelset[1])
         #d=depth_val[pixelset[0]][pixelset[1]]
         #print(d)
-        centerdepth_val.append(depth_val[pixelset[0]][pixelset[1]])
+        """ to call np.array you have to do [row!!!] [col!] """
+        
+        centerdepth_val.append(depth_val[pixelset[1]][pixelset[0]])
     #error_RGB_depth = [abs(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
     error_RGB_depth = [(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
     print('Error',error_RGB_depth)
     return error_RGB_depth
 
-    
-    
+
+#Specify Data OUTPUT path
+data_path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\Depth Estimation Eval 1'
 
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -89,9 +131,9 @@ param = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
 camera_matrix = param.getNode("K").mat()
 dist_coef = param.getNode("D").mat()
 
+############################ Set up realsense pipeline #########################
 # Create a pipeline
 pipeline = rs.pipeline() 
-
 
 #Create a config and configure the pipeline to stream different resolutions of color and depth streams
 config = rs.config()
@@ -112,7 +154,10 @@ align = rs.align(align_to)
 #Calll aruco dictionary
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
 
-# Streaming loop
+#Create an empty output storage for maker ids and tvectors
+output_data=[]
+
+################# Streaming loop###############
 try:
     while True:
         # Access canera streams/framesets: RBG and depth
@@ -137,6 +182,7 @@ try:
         #### CHECK #################################################
         #### NOT SURE WHAT THE DIFFERENCE IS WITH THIS VS .get_distance ( pixel x, y)
         depth_val = depth_image*depth_scale
+        #print('shape of depthval', depth_val.shape)
         
         # Find RGB's corresponding Grayscale values(ARUCO requires grayscale for the threshold operations) 
         gray_image=cv2.cvtColor(color_image,cv2.COLOR_BGR2GRAY)
@@ -152,7 +198,8 @@ try:
         
         
         ################# TESTING!!############
-        #Find Corner Centers
+        """Find Corner Centers using AVERAGING"""
+        
         print("Shape of corners", np.shape(corners))
         print('corners', corners)
         center_pixels = stereoRGB_depth(corners)
@@ -168,7 +215,8 @@ try:
             id_rvec=[]
             id_tvec=[]
             id_hold=[]
-        
+
+            #For Identified Markers find POSE estimation:
             for i in range(0,len(ids)):
                 #Get translation and rotation vectors (1,1,3 shape)
                 print(i)
@@ -190,11 +238,53 @@ try:
 
             #print('shape of tvec', np.shape(id_tvec))==> get all arrays. Shape is (length isd, 1, 1,3)
             
+            ############### Append OUTPUT data############
+            temp_vector=[]
+            #zipped_data=list(zip(ids,id_tvec))
+            #print('zipped data',zipped_data)
+            
+            #[[temp.append(np.reshape(vector,(1,3)))] for N in id_tvec for marker in N for vector in marker]
+            reduced_tvec=np.squeeze(np.array(id_tvec))
+            
+            
+            #Does NOT work!
+            """Find Centers using Projection/Transformation"
+            center_WORLD_image= center=center_reprojection(color_image,id_tvec, id_rvec, camera_matrix, dist_coef)
+            print('average center',center_pixels)
+            print('WORLD Transformation',center_WORLD_image) """
+            
+            
+            
             ########### Calculate Error Amongst Methods########
             
             error_RGB_depth = evalDepth(center_pixels, depth_val,id_tvec)
             print('Percent Error Between RGB and DEPTH ',error_RGB_depth)
+           
+           
+            ###############Record Depth RGB and Camera values#########
             
+            #Reduce dimensionality (3,1,1,3)==> (3,3)
+            red_tvec=np.squeeze(np.array(id_tvec))
+            #np.array ids
+            ID=np.array(ids)
+            
+            #condition if only 1 marker is present/read
+            if len(ID)==1:
+                data_store=np.insert(red_tvec,0,np.squeeze(ID))
+                #data_store=np.squeeze(data_store)
+                print('data single shape',data_store)
+                #np.reshape(data_store,(1,4))
+                output_data.append(data_store)
+                
+            else:
+                data_store = np.insert(red_tvec, 0, ID.T, axis=1)
+            
+                #append data
+                for row in data_store:
+                    output_data.append(row)
+
+
+
             
             #############################Relative Aruco Pose#############################
             #find possible combinations using comprehension lists 
@@ -224,3 +314,19 @@ try:
             break
 finally:
     pipeline.stop()
+
+#################Execute analysis ################
+
+#initalize data frame
+col_labels=['ID', 'Xc','Yc','Zc']
+df=pd.DataFrame(data=output_data,index=None,columns=None)
+
+# writing to Excel
+datatoexcel = pd.ExcelWriter('Run2.xlsx')
+
+# write DataFrame to excel
+df.to_excel(datatoexcel)
+
+# save the excel
+datatoexcel.save()
+print('DataFrame is written to Excel File successfully.')
