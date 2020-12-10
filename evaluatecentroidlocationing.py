@@ -259,16 +259,6 @@ try:
 
 
 
-        
-        
-        
-        
-        
-        
-        
-        
-         
-
           
         #Make depth image have similar [3 channel] structure as RGB
         depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) 

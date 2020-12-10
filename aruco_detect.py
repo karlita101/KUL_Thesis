@@ -117,7 +117,7 @@ def evalDepth(center_pixels, depth_val, id_tvec):
     #error_RGB_depth = [abs(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
     error_RGB_depth = [(i-j)/i*100 if i != 0 else None for i, j in zip(centerdepth_val, centerdepth_aruco)]
     print('Error',error_RGB_depth)
-    return error_RGB_depth
+    return error_RGB_depth, centerdepth_val
 
 
 #Specify Data OUTPUT path
@@ -257,7 +257,7 @@ try:
             
             ########### Calculate Error Amongst Methods########
             
-            error_RGB_depth = evalDepth(center_pixels, depth_val,id_tvec)
+            error_RGB_depth, centerdepth_val= evalDepth(center_pixels, depth_val,id_tvec)
             print('Percent Error Between RGB and DEPTH ',error_RGB_depth)
            
            
@@ -271,14 +271,14 @@ try:
             #condition if only 1 marker is present/read
             if len(ID)==1:
                 data_store=np.insert(red_tvec,0,np.squeeze(ID))
+                data_store=np.insert(data_store,3,centerdepth_val[0])
                 #data_store=np.squeeze(data_store)
                 print('data single shape',data_store)
-                #np.reshape(data_store,(1,4))
                 output_data.append(data_store)
                 
             else:
                 data_store = np.insert(red_tvec, 0, ID.T, axis=1)
-            
+                data_store = np.insert(data_store, 3, np.array(centerdepth_val).T,axis=1)
                 #append data
                 for row in data_store:
                     output_data.append(row)
@@ -318,11 +318,11 @@ finally:
 #################Execute analysis ################
 
 #initalize data frame
-col_labels=['ID', 'Xc','Yc','Zc']
-df=pd.DataFrame(data=output_data,index=None,columns=None)
+col_labels=['ID', 'Xc','Yc','Zc','Depth_RS']
+df=pd.DataFrame(data=output_data,index=None,columns=col_labels)
 
 # writing to Excel
-datatoexcel = pd.ExcelWriter('Run2.xlsx')
+datatoexcel = pd.ExcelWriter('Run3.xlsx')
 
 # write DataFrame to excel
 df.to_excel(datatoexcel)
@@ -330,3 +330,6 @@ df.to_excel(datatoexcel)
 # save the excel
 datatoexcel.save()
 print('DataFrame is written to Excel File successfully.')
+
+grouped_ID=df.groupby('ID').agg({'Zc':['count','mean','median','min','max','std']})
+print(grouped_ID)
