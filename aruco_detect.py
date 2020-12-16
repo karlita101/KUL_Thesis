@@ -137,8 +137,8 @@ pipeline = rs.pipeline()
 
 #Create a config and configure the pipeline to stream different resolutions of color and depth streams
 config = rs.config()
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30) #16 bit linear depth values
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30) #8 bit bgr
+config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30) #16 bit linear depth values
+config.enable_stream(rs.stream.color, 960, 540,rs.format.bgr8, 30)  # 8 bit bgr
 
 # Start streaming
 profile = pipeline.start(config)
@@ -157,9 +157,15 @@ aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
 #Create an empty output storage for maker ids and tvectors
 output_data=[]
 
+# Initialize a counter for detection rate
+counter=0
+
 ################# Streaming loop###############
 try:
     while True:
+        
+        #Update counter
+        counter+=1
         # Access canera streams/framesets: RBG and depth
         frames = pipeline.wait_for_frames()
 
@@ -322,7 +328,7 @@ col_labels=['ID', 'Xc','Yc','Zc','Depth_RS']
 df=pd.DataFrame(data=output_data,index=None,columns=col_labels)
 
 # writing to Excel
-datatoexcel = pd.ExcelWriter('Run3.xlsx')
+datatoexcel = pd.ExcelWriter('Test Count Rate 6 LIGHT ON_ at 1.3810m at D848x480 RGB 960x540 Dec14_2020.xlsx')
 
 # write DataFrame to excel
 df.to_excel(datatoexcel)
@@ -333,3 +339,6 @@ print('DataFrame is written to Excel File successfully.')
 
 grouped_ID=df.groupby('ID').agg({'Zc':['count','mean','median','min','max','std']})
 print(grouped_ID)
+
+#print count total
+print('Total Count Instances',counter)
