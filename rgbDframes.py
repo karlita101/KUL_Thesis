@@ -28,7 +28,7 @@ def f(x):
 
 #Specify Data OUTPUT path
 path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/RGB'
-path_d = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/Depth'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/RGBA'
 path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/Mask'
 
 #Get Camera Parameters
@@ -165,60 +165,50 @@ try:
                 #Get depth image interms of  milimeters 
                 depth_true=depth_selection*depth_scale*1000
                 
+                #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
+                # d>dwork is set to 0
                 norm_depth=f(depth_true)
                 norm_depth=np.uint8(norm_depth)
-                norm_dept[norm_depth>255]=0
+                norm_depth[norm_depth>255]=0
                 
-                """
-                #normalize the image based on a subsection region of interest (ROI)
-                #MUST  exclude 0  or else black will  dominate
-                ROI_mean = np.mean(np.where(depth_selection > 0))
-                ROI_std = np.std(np.where(depth_selection > 0))
-
-                #Clip frame to lower and upper STD
-                offset = 0.2
-                clipped = np.clip(depth_selection, ROI_mean - offset*ROI_std, ROI_mean + offset*ROI_std).astype(np.uint8)
-
-                # Normalize to range
-                result = cv2.normalize(clipped, clipped, 0, 255, norm_type=cv2.NORM_MINMAX)
-                """
                 
                 for pair in pts[0]:
-                    print("Depth val", depth_image[pair[1],pair[0]])      
+                    print("Depth val", depth_image[pair[1],pair[0]])
+                    print("Nomalized Depth val", norm_depth[pair[1], pair[0]])
                 
-        """ Sanity Check
-        for  marker in corn_sq:
-            for corn in marker:
-                cv2.circle(color_image, tuple(corn), 1, (0, 0, 255), 4)
-        
-        cv2.circle(color_image, tuple([228, 399]), 1, (0, 0, 255), 4)
-        """
        
         # Render images:
         #   depth align to color on left 
         #   depth on right
         #depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-        depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+        depth_colormap = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
         images = np.hstack((color_image, depth_colormap))
         #images = np.hstack((color_image, depth_image)) 
        
        
+        #First create the image with alpha channel
+        rgba = cv2.cvtColor(color_image, cv2.COLOR_RGB2RGBA)
+
+        #Then assign the mask to the last channel of the image
+        rgba[:, :, 3] = norm_depth
+        
 
         """Show Frames"""
-        cv2.namedWindow('Aligned RGB-D Frames', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('Aligned RGB-D Frames', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('Aligned RGB-D Frames',images)
         key = cv2.waitKey(1)       
        
-      
+
        
         #Enter to begin capturing images
         if keyboard.is_pressed('Enter'):
             count += 1
             
-            cv2.imwrite(os.path.join(path_rgb, str(count)+'.png'), color_image)
+            cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
+            cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
             #grey level image file and hard to save detail. RS suggested making a change to depth_image
             #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
-            cv2.imwrite(os.path.join(path_mask, str(count)+'.png'), binary_mask)
+            cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
             print("Images has been captured.")
             continue
                 
