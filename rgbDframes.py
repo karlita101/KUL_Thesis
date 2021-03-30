@@ -23,13 +23,17 @@ def f(x):
     return ((val_max-val_min)/(dwork-0)*x) + b
 
 
-
-
-
 #Specify Data OUTPUT path
-path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/RGB'
-path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/RGBA'
-path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/Mask'
+
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/Mask'
+"""
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/Mask'
+"""
+
 
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -45,8 +49,6 @@ aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
 #Initialize aruco IDs used for polygon shape: top left bottom left, top right and  bottom right
 arucoIDs=[2,35,100,200]
 
-
-
 # Create a pipeline
 pipeline = rs.pipeline()
 
@@ -54,13 +56,11 @@ pipeline = rs.pipeline()
 #  different resolutions of color and depth streams
 config = rs.config()
 
-
 #Create a config and configure the pipeline to stream different resolutions of color and depth streams
 config = rs.config()
 # 16 bit linear depth values
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)  # 8 bit bgr
-
 
 # Start streaming
 profile = pipeline.start(config)
@@ -80,11 +80,9 @@ count = 0
 #initialize empty polygon corners
 poly_corners = [None]*4
 
-
 # Streaming loop
 try:
     while True:
-        
 
         # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
@@ -104,22 +102,7 @@ try:
         
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
-        
-        
-        ## TO AVOID BLACK DEPTH IMAGE REPLACE#
-        """
-        aligned_depth_image = np.asanyarray(aligned_depth_frame.get_data())
-        depth_image = cv2.applyColorMap(cv2.convertScaleAbs(
-            aligned_depth_image), cv2.COLORMAP_RAINBOW)
-        color_image = np.asanyarray(color_frame.get_data())
-        depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
-        
-        """
-        
-        #depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
-           
-     
-       
+             
         #Detect ARUCO Marker
         #Grayscale IMG
         gray_image=cv2.cvtColor(color_image,cv2.COLOR_BGR2GRAY)
@@ -129,12 +112,13 @@ try:
         #Draw detected markers on RGB image
         arucoParameters = aruco.DetectorParameters_create()
         corners, ids, rejectedImgPoints = aruco.detectMarkers(gray_image, aruco_dict, parameters=arucoParameters, cameraMatrix=camera_matrix, distCoeff=dist_coef)
-        color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
+        #color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
+        #Don't show  ID's so that the DL  networks doesn't learn these
+        aruco.drawDetectedMarkers(color_image, corners)
         corn_sq = np.squeeze(corners)
         print(corn_sq)
         
-        if ids is not None:
-    
+        if ids is not None:    
            if len(corners) == 4:
                 for i, id in enumerate(ids):
                     #print('ID index', i, 'Value',id)
@@ -154,62 +138,56 @@ try:
                 #Create a binary mask ( 1 channel)
                 binary_mask=np.zeros((gray_image.shape),np.uint8)
                 cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
-                #cv2.imshow('Binary Mask',binary_mask)
-                #cv2.waitKey(1)
 
-
-                #Only take the depth selection inside the binary mask (ignore the rest since we only care about the  relative depth of the object surface)
+                #Only take the depth and  RGB selection inside the binary mask 
+                # (ignore the rest since we only care about the  relative depth of the object surface)
+                """
                 depth_selection = cv2.bitwise_and(depth_image, depth_image, mask=binary_mask)
-                #print('Depth Shape',depth_selection.shape)  #4800x640
-                
-                #Get depth image interms of  milimeters 
-                depth_true=depth_selection*depth_scale*1000
-                
-                #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
-                # d>dwork is set to 0
-                norm_depth=f(depth_true)
-                norm_depth=np.uint8(norm_depth)
-                norm_depth[norm_depth>255]=0
+                color_selection=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
+                color_selection[binary_mask==0]=255
+                """
                 
                 
-                for pair in pts[0]:
-                    print("Depth val", depth_image[pair[1],pair[0]])
-                    print("Nomalized Depth val", norm_depth[pair[1], pair[0]])
+        #Get depth image interms of  milimeters 
+        #depth_true=depth_selection*depth_scale*1000 to get in mm
+        depth_true = depth_image*depth_scale*1000
                 
-       
+        #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
+        # d>dwork is set to 0
+        norm_depth=f(depth_true)
+        norm_depth=np.uint8(norm_depth)
+        norm_depth[norm_depth>255]=0
+
         # Render images:
-        #   depth align to color on left 
-        #   depth on right
-        #depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
+        #   depth align to color on left. Depth on right
+        #Show the full color image
         depth_colormap = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
         images = np.hstack((color_image, depth_colormap))
         #images = np.hstack((color_image, depth_image)) 
        
        
-        #First create the image with alpha channel
+        #First create the image with alpha channel (selection)
         rgba = cv2.cvtColor(color_image, cv2.COLOR_RGB2RGBA)
 
         #Then assign the mask to the last channel of the image
         rgba[:, :, 3] = norm_depth
         
 
-        """Show Frames"""
+        """Initialize Frames"""
         cv2.namedWindow('Aligned RGB-D Frames', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('Aligned RGB-D Frames',images)
         key = cv2.waitKey(1)       
-       
 
-       
         #Enter to begin capturing images
         if keyboard.is_pressed('Enter'):
             count += 1
             
-            cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
+            cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_selection)
             cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
             #grey level image file and hard to save detail. RS suggested making a change to depth_image
             #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
             cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
-            print("Images has been captured.")
+            print("Total images captured:", count)
             continue
                 
         # Press esc or 'q' to close the image window
