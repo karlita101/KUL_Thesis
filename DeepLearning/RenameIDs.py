@@ -17,8 +17,7 @@ from os.path import isfile,join
 from glob import glob
 from PIL import Image
 
-path = 'Ruixuan_USimages/train/label/' # Source Folder
-dstpath = 'Ruixuan_USimages/train/image/' # Destination Folder
+dstpath = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDframes/RGBA'
 
 
 
