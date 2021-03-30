@@ -24,16 +24,20 @@ def f(x):
 
 
 #Specify Data OUTPUT path
-
+"""
 path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/RGB'
 path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/RGBA'
 path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackground/Mask'
-"""
-path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/RGB'
-path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/RGBA'
-path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDtest/ARUCO/Mask'
-"""
 
+"""
+"""
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/ARUCO/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/ARUCO/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/ARUCO/Mask'
+"""
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/Mask'
 
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -146,7 +150,8 @@ try:
                 color_selection=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
                 color_selection[binary_mask==0]=255
                 """
-                
+           else:
+                pts=None    
                 
         #Get depth image interms of  milimeters 
         #depth_true=depth_selection*depth_scale*1000 to get in mm
@@ -178,18 +183,22 @@ try:
         cv2.imshow('Aligned RGB-D Frames',images)
         key = cv2.waitKey(1)       
 
+        if pts is not None:
         #Enter to begin capturing images
-        if keyboard.is_pressed('Enter'):
-            count += 1
-            
-            cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_selection)
-            cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
-            #grey level image file and hard to save detail. RS suggested making a change to depth_image
-            #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
-            cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
-            print("Total images captured:", count)
-            continue
+            if keyboard.is_pressed('Enter'):
+                count += 1
                 
+                cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
+                cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
+                #grey level image file and hard to save detail. RS suggested making a change to depth_image
+                #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
+                cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
+                print("Total images captured:", count)
+                continue
+            elif key & 0xFF == ord('q') or key == 27:
+                cv2.destroyAllWindows()
+                break
+                    
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
             cv2.destroyAllWindows()
