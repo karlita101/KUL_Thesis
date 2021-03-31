@@ -120,7 +120,7 @@ try:
         #Don't show  ID's so that the DL  networks doesn't learn these
         aruco.drawDetectedMarkers(color_image, corners)
         corn_sq = np.squeeze(corners)
-        print(corn_sq)
+        #print(corn_sq)
         
         if ids is not None:    
            if len(corners) == 4:
@@ -152,10 +152,14 @@ try:
                 """
            else:
                 pts=None    
+        else:
+            #if there are no id's ( no aruco) detected pass NONE
+            pts=None
                 
         #Get depth image interms of  milimeters 
         #depth_true=depth_selection*depth_scale*1000 to get in mm
         depth_true = depth_image*depth_scale*1000
+        print("depth_true type",type(depth_true))
                 
         #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
         # d>dwork is set to 0
@@ -193,6 +197,17 @@ try:
                 #grey level image file and hard to save detail. RS suggested making a change to depth_image
                 #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
                 cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
+                print("Total images captured:", count)
+                continue
+            elif key & 0xFF == ord('q') or key == 27:
+                cv2.destroyAllWindows()
+                break
+        else:
+            if keyboard.is_pressed('Enter'):
+                count += 1
+
+                cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
+                cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
                 print("Total images captured:", count)
                 continue
             elif key & 0xFF == ord('q') or key == 27:
