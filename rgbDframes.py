@@ -35,9 +35,28 @@ path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundte
 path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/ARUCO/RGBA'
 path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/ARUCO/Mask'
 """
-path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/RGB'
-path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/RGBA'
-path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/WOUT/Mask'
+"""
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/NOpoly/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/NOpoly/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/RGBDBackgroundtest/NOpoly/Mask'
+"""
+
+#Get train data
+"""
+path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTrain/RGB'
+path_rgba = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTrain/RGBA'
+path_mask = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTrain/Mask'
+path_depth = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTrain/Depth'
+path_TRUEdepth = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTrain/TRUEDepth'
+"""
+
+#initialize test
+path_rgb_test = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTest/WOUT/RGB'
+path_rgba_test = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTest/WOUT/RGBA'
+path_mask_test = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTest/WOUT/Mask'
+path_depth_test= 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTest/WOUT/Depth'
+path_TRUEdepth_test= 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/210408PhantomTest/WOUT/TRUEDepth'
+
 
 #Get Camera Parameters
 path=r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -51,7 +70,9 @@ dist_coef = param.getNode("D").mat()
 aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
 
 #Initialize aruco IDs used for polygon shape: top left bottom left, top right and  bottom right
-arucoIDs=[2,35,100,200]
+#arucoIDs=[2,35,100,200]
+#21040 KR: add aruco ID's for test
+arucoIDs = [4, 3, 300, 400]
 
 # Create a pipeline
 pipeline = rs.pipeline()
@@ -74,6 +95,10 @@ depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: " , depth_scale)
 
+#210409 KR: Turn ON Emitter
+depth_sensor.set_option(rs.option.emitter_always_on, 1)
+
+
 # Create an align object
 # rs.align allows us to perform alignment of depth frames to others frames
 # The "align_to" is the stream type to which we plan to align depth frames.
@@ -81,6 +106,8 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 count = 0
+count2=0
+
 #initialize empty polygon corners
 poly_corners = [None]*4
 
@@ -116,9 +143,11 @@ try:
         #Draw detected markers on RGB image
         arucoParameters = aruco.DetectorParameters_create()
         corners, ids, rejectedImgPoints = aruco.detectMarkers(gray_image, aruco_dict, parameters=arucoParameters, cameraMatrix=camera_matrix, distCoeff=dist_coef)
-        #color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
+        
         #Don't show  ID's so that the DL  networks doesn't learn these
-        aruco.drawDetectedMarkers(color_image, corners)
+        #color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
+        #210409 KR: #DON'T DRAW!
+        #aruco.drawDetectedMarkers(color_image, corners)
         corn_sq = np.squeeze(corners)
         #print(corn_sq)
         
@@ -138,7 +167,11 @@ try:
                         print('Another ID was detected', id)
                 #Draw the polyline border
                 pts = np.array([poly_corners],np.int32)
-                cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
+                
+                #KR 03/31: comment out to capture images without the polygon lines. Can  it  detect it
+                #210409: DON'T DRAW BORDER
+                #cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
+                
                 #Create a binary mask ( 1 channel)
                 binary_mask=np.zeros((gray_image.shape),np.uint8)
                 cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
@@ -159,7 +192,6 @@ try:
         #Get depth image interms of  milimeters 
         #depth_true=depth_selection*depth_scale*1000 to get in mm
         depth_true = depth_image*depth_scale*1000
-        print("depth_true type",type(depth_true))
                 
         #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
         # d>dwork is set to 0
@@ -194,9 +226,9 @@ try:
                 
                 cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
                 cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
-                #grey level image file and hard to save detail. RS suggested making a change to depth_image
-                #cv2.imwrite(os.path.join(path_d, str(count)+'.png'), depth_image)
                 cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
+                cv2.imwrite(os.path.join(path_depth, str(count).zfill(4)+'.png'), norm_depth)
+                cv2.imwrite(os.path.join(path_TRUEdepth, str(count).zfill(4)+'.png'), depth_image)
                 print("Total images captured:", count)
                 continue
             elif key & 0xFF == ord('q') or key == 27:
@@ -204,11 +236,15 @@ try:
                 break
         else:
             if keyboard.is_pressed('Enter'):
-                count += 1
-
-                cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
-                cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
-                print("Total images captured:", count)
+                count2 += 1
+                print("Number of undetected ARUCO frames",count2)
+                #210408: Capturing images with ARUCO, so if no polygon is detected then we ignore
+                cv2.imwrite(os.path.join(path_rgb_test, str(count).zfill(4)+'.png'), color_image)
+                cv2.imwrite(os.path.join(path_rgba_test, str(count).zfill(4)+'.png'), rgba)
+                cv2.imwrite(os.path.join(path_depth_test, str(count).zfill(4)+'.png'), norm_depth)
+                cv2.imwrite(os.path.join(path_TRUEdepth_test, str(count).zfill(4)+'.png'), depth_image)
+                #print("Total images captured:", count)
+                
                 continue
             elif key & 0xFF == ord('q') or key == 27:
                 cv2.destroyAllWindows()
