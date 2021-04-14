@@ -9,6 +9,25 @@ from datetime import datetime
 from open3d import *
 
 
+def get_int(camera_matrix, H=480, W=640):
+    #Need o3d
+    fx = camera_matrix[0, 0]
+    cx = camera_matrix[0, 2]
+    fy = camera_matrix[1, 1]
+    cy = camera_matrix[1, 2]
+    intrinsic = open3d.camera.PinholeCameraIntrinsic(W, H, fx, fy, cx, cy)
+    return intrinsic
+
+
+#Intrinsic Camera Path
+path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
+#Load Intrinsics
+param = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
+camera_matrix = param.getNode("K").mat()
+
+intrinsic_od3 = get_int(camera_matrix, H=480, W=640)
+
+
 pipeline = rs.pipeline()
 
 #Create a config and configure the pipeline to stream different resolutions of color and depth streams
@@ -26,25 +45,22 @@ depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: ", depth_scale)
 
-
-
 align_to = rs.stream.color
 align = rs.align(align_to)
 
+vis = open3d.visualization.Visualizer()
+vis.create_window()
+pcd = open3d.geometry.PointCloud()
 
-depth_sensor = profile.get_device().first_depth_sensor()
 
+frame_count=0
 
 # Streaming loop
 try:
-    vis = open3d.visualization.Visualizer()
-    vis.create_window("Tests")
-    pcd = open3d.geometry.PointCloud()
     
     while True:
         dt0 = datetime.now()
-        vis.add_geometry(pcd)
-        pcd.clear()
+
         
         # Get frameset of color and depth
 
@@ -63,22 +79,46 @@ try:
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         
+        img_color = open3d.geometry.Image(color_image)
+        img_depth = open3d.geometry.Image(depth_image)
         
-        pc = rs.pointcloud()
+        #Create RGBD image
+        #rgbd_image = open3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth, depth_scale*1000, depth_trunc=2000, convert_rgb_to_intensity=False)
+        rgbd_image = open3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth,convert_rgb_to_intensity=False)
 
-        pc.map_to(color_frame)
-        points = pc.calculate(aligned_depth_frame)
-        print(type(points))
-        vtx = np.asanyarray(points.get_vertices())
-        print(type(vtx))
-        print(vtx.shape)
+        #Create PC from RGBD
+        temp = open3d.geometry.PointCloud.create_from_rgbd_image(
+            rgbd_image, intrinsic_od3)
+        # Flip it, otherwise the pointcloud will be upside down
+        temp.transform([[1, 0, 0, 0], [0, -1, 0, 0],
+                       [0, 0, -1, 0], [0, 0, 0, 1]])
+
+        pcd.points=temp.points
+        pcd.colors=temp.colors
+
         
-        pcd.points = open3d.utility.Vector3dVector(vtx)
+        
+        if frame_count == 0:
+            vis.add_geometry(pcd)
+            #open3d.visualization.draw_geometries([pcd])
+        
+        #open3d.visualization.draw_geometries([pcd])
+        
         vis.update_geometry()
         vis.poll_events()
         vis.update_renderer()
+        
+        
         process_time = datetime.now() - dt0
         print("FPS = {0}".format(1/process_time.total_seconds()))
-
+        frame_count += 1
+        
+        # Press esc or 'q' to close the image window
+        if key & 0xFF == ord('q') or key == 27:
+            cv2.destroyAllWindows()
+            break
+        
 finally:
     pipeline.stop()
+
+vis.destroy_window()
