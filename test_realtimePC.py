@@ -48,19 +48,23 @@ print("Depth Scale is: ", depth_scale)
 align_to = rs.stream.color
 align = rs.align(align_to)
 
-vis = open3d.visualization.Visualizer()
-vis.create_window()
-pcd = open3d.geometry.PointCloud()
 
 
-frame_count=0
+#frame_count=0
 
 # Streaming loop
 try:
+    geometrie_added = False
+    #vis = Visualizer()
+    vis = open3d.visualization.Visualizer()
+    vis.create_window('Aligned Column', width=640, height=480)
+    pcd = open3d.geometry.PointCloud()
     
     while True:
         dt0 = datetime.now()
-
+        vis.add_geometry(pcd)
+        #Add
+        pcd.clear()
         
         # Get frameset of color and depth
 
@@ -96,8 +100,12 @@ try:
         pcd.points=temp.points
         pcd.colors=temp.colors
 
+            
+        vis.update_geometry(pcd)
+        vis.poll_events()    
+        vis.update_renderer()
         
-        
+        """
         if frame_count == 0:
             vis.add_geometry(pcd)
             #open3d.visualization.draw_geometries([pcd])
@@ -108,15 +116,15 @@ try:
         vis.poll_events()
         vis.update_renderer()
         
-        
+        """
         process_time = datetime.now() - dt0
         print("FPS = {0}".format(1/process_time.total_seconds()))
-        frame_count += 1
+        #frame_count += 1
         
         # Press esc or 'q' to close the image window
-        if key & 0xFF == ord('q') or key == 27:
-            cv2.destroyAllWindows()
-            break
+        #if key & 0xFF == ord('q') or key == 27:
+            #cv2.destroyAllWindows()
+            #break
         
 finally:
     pipeline.stop()
