@@ -67,11 +67,15 @@ config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)  # 8 bit bgr
 # Start streaming
 pipeline.start(config)
 
+
 # Get stream profile and camera intrinsics
 profile = pipeline.get_active_profile()
 depth_profile = rs.video_stream_profile(profile.get_stream(rs.stream.depth))
 depth_intrinsics = depth_profile.get_intrinsics()
 w, h = depth_intrinsics.width, depth_intrinsics.height
+
+print("Orginal h",h,"original w",w)
+
 
 # Processing blocks
 pc = rs.pointcloud()
@@ -257,28 +261,38 @@ def pointcloud(out, verts, texcoords, color, painter=True):
 
 out = np.empty((h, w, 3), dtype=np.uint8)
 
+align_to = rs.stream.color
+align = rs.align(align_to)
+
+
 while True:
     # Grab camera data
     if not state.paused:
         
         # Wait for a coherent pair of frames: depth and color
         frames = pipeline.wait_for_frames()
+        
+        # depth_frame = frames.get_depth_frame()
+        # color_frame = frames.get_color_frame()
+        
+        #KR
+        #Align the depth frame to color frame
+        aligned_frames = align.process(frames)
 
-        depth_frame = frames.get_depth_frame()
-        color_frame = frames.get_color_frame()
+        #Get aligned frames        
+        depth_frame = aligned_frames.get_depth_frame()
+        color_frame = aligned_frames.get_color_frame()
 
         depth_frame = decimate.process(depth_frame)
 
         # Grab new intrinsics (may be changed by decimation)
-        depth_intrinsics = rs.video_stream_profile(
-            depth_frame.profile).get_intrinsics()
+        depth_intrinsics = rs.video_stream_profile(depth_frame.profile).get_intrinsics()
         w, h = depth_intrinsics.width, depth_intrinsics.height
 
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
 
-        depth_colormap = np.asanyarray(
-            colorizer.colorize(depth_frame).get_data())
+        depth_colormap = np.asanyarray(colorizer.colorize(depth_frame).get_data())
 
         if state.color:
             mapped_frame, color_source = color_frame, color_image
