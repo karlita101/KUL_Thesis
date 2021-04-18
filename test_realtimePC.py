@@ -51,13 +51,11 @@ pipeline = rs.pipeline()
 
 #Create a config and configure the pipeline to stream different resolutions of color and depth streams
 config = rs.config()
-
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.rgb8, 30)
 
 # Start streaming
 profile = pipeline.start(config)
-
 # Getting the depth sensor's depth scale (see rs-align example for explanation)
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
@@ -99,12 +97,11 @@ try:
         aligned_frames = align.process(frames)
         
         #Get Depth Intrinsics 
+        #KR 0418 ignore dpeth intrinsics
         #Return pinhole camera intrinsics for Open3d
-        intrinsics = aligned_frames.profile.as_video_stream_profile().intrinsics
-        pinhole_camera_intrinsic = open3d.camera.PinholeCameraIntrinsic(
-            intrinsics.width, intrinsics.height, intrinsics.fx, intrinsics.fy, intrinsics.ppx, intrinsics.ppy)
-
-        print(intrinsics.width, intrinsics.height)
+        #intrinsics = aligned_frames.profile.as_video_stream_profile().intrinsics
+        ##pinhole_camera_intrinsic = open3d.camera.PinholeCameraIntrinsic(intrinsics.width, intrinsics.height, intrinsics.fx, intrinsics.fy, intrinsics.ppx, intrinsics.ppy)
+        #print(intrinsics.width, intrinsics.height)
         
         aligned_depth_frame = aligned_frames.get_depth_frame()
         color_frame = aligned_frames.get_color_frame()
@@ -128,11 +125,12 @@ try:
         rgbd_image = open3d.geometry.RGBDImage.create_from_color_and_depth(img_color, img_depth,convert_rgb_to_intensity=False)
 
         ## KR 0417: USE DEPTH CAMERA INTRINSICS
+        #KR 0418: reactivate
         #Create PC from RGBD
-        #temp = open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic_od3)
+        temp= open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic_od3)
         
-        temp = open3d.geometry.PointCloud.create_from_rgbd_image(
-            rgbd_image, pinhole_camera_intrinsic)
+        #KR 0418: Use color camera intrinsics since the depth frame was already aligned with the depth 
+        #temp = open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, pinhole_camera_intrinsic)
         
         
         # Flip it, otherwise the pointcloud will be upside down
