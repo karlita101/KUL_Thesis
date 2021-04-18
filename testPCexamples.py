@@ -24,6 +24,7 @@ import time
 import cv2
 import numpy as np
 import pyrealsense2 as rs
+from datetime import datetime
 
 
 class AppState:
@@ -73,9 +74,16 @@ profile = pipeline.get_active_profile()
 depth_profile = rs.video_stream_profile(profile.get_stream(rs.stream.depth))
 depth_intrinsics = depth_profile.get_intrinsics()
 w, h = depth_intrinsics.width, depth_intrinsics.height
-
 print("Orginal h",h,"original w",w)
 
+
+depth_sensor = profile.get_device().first_depth_sensor()
+depth_scale = depth_sensor.get_depth_scale()
+print("Depth Scale is: ", depth_scale)
+
+
+#Turn ON Emitter
+depth_sensor.set_option(rs.option.emitter_always_on, 1)
 
 # Processing blocks
 pc = rs.pointcloud()
@@ -268,6 +276,7 @@ align = rs.align(align_to)
 while True:
     # Grab camera data
     if not state.paused:
+        dt0 = datetime.now()
         
         # Wait for a coherent pair of frames: depth and color
         frames = pipeline.wait_for_frames()
@@ -282,7 +291,11 @@ while True:
         #Get aligned frames        
         depth_frame = aligned_frames.get_depth_frame()
         color_frame = aligned_frames.get_color_frame()
-
+        
+        #Get timing cehckpoints
+        process_time_alignment = datetime.now() - dt0
+        print("Process Time Alignment",process_time_alignment)
+            
         depth_frame = decimate.process(depth_frame)
 
         # Grab new intrinsics (may be changed by decimation)
@@ -329,7 +342,6 @@ while True:
         axes(out, view(state.pivot), state.rotation, thickness=4)
 
     dt = time.time() - now
-
     print("FPS = {0}",1.0/dt)
           
     cv2.setWindowTitle(
