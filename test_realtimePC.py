@@ -76,12 +76,13 @@ frate_count=[]
 
 # Streaming loop
 try:
-    geometrie_added = False
+    geometry_added = False
     #vis = Visualizer()
     vis = open3d.visualization.Visualizer()
     #vis.create_window('Aligned Column', width=640, height=480)
     vis.create_window("Test")
     pcd = open3d.geometry.PointCloud()
+    
     
     while True:
         #initalize time
@@ -108,6 +109,10 @@ try:
         aligned_depth_frame = aligned_frames.get_depth_frame()
         color_frame = aligned_frames.get_color_frame()
         
+        #Alignment FPS
+        process_time_alignment = datetime.now() - dt0
+        print("Process Time Alignment",process_time_alignment)
+        print("Alignment FPS = {0}".format(1/process_time_alignment.total_seconds()))
 
         if not aligned_depth_frame or not color_frame:
             continue
@@ -137,23 +142,18 @@ try:
         pcd.points=temp.points
         pcd.colors=temp.colors
 
+        
+        #alignment FPS
+        process_time_pc = datetime.now() - dt0
+        print("Process Time PC", process_time_pc)
+        print("Alignment FPS = {0}".format(
+            1/process_time_pc.total_seconds()))
             
         vis.update_geometry(pcd)
         vis.poll_events()    
         vis.update_renderer()
         
-        """
-        if frame_count == 0:
-            vis.add_geometry(pcd)
-            #open3d.visualization.draw_geometries([pcd])
-        
-        #open3d.visualization.draw_geometries([pcd])
-        
-        vis.update_geometry()
-        vis.poll_events()
-        vis.update_renderer()
-        
-        """
+        #Calculate process time for PC visualization
         process_time = datetime.now() - dt0
         print("FPS = {0}".format(1/process_time.total_seconds()))
         
