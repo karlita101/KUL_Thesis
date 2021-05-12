@@ -34,6 +34,7 @@ import os
 import keyboard
 
 
+from preregistration import *
 
 
 class Preset(IntEnum):
@@ -46,13 +47,14 @@ class Preset(IntEnum):
 
 
 def get_intrinsic_matrix(frame):
+    #Get from intelrealsensecamera directly
     intrinsics = frame.profile.as_video_stream_profile().intrinsics
     out = o3d.camera.PinholeCameraIntrinsic(640, 480, intrinsics.fx,
                                             intrinsics.fy, intrinsics.ppx,
                                             intrinsics.ppy)
     return out
 
-
+#(Not using preprocessing now)
 def preprocess_point_cloud(pointcloud, voxel_size):
     print(":: Downsample with a voxel size %.6f." % voxel_size)
     pointcloud_down = pointcloud.voxel_down_sample(voxel_size=0.05)
@@ -65,24 +67,87 @@ def preprocess_point_cloud(pointcloud, voxel_size):
         search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     return pointcloud_down
 
+#Input CAD position coordinates for all aruco position corners and return their center coordinates
+#in METERS
+def stereoRGB_depth(square):
+
+    #Inputs:
+
+    #corners [[Nx4] and their corresponding pixels]
+    #N is number of markers
+    #Recall that order of corners are clockwise
+    """Averaging"""
+    #Get average x and y coordinate for all Nx4 corners
+    #print('corners', square)
+    #Ensure integer pixels
+    
+    x_center=[corner[0] for corner in square]
+    x_center=sum(x_center)/4000
+ 
+    y_center = [corner[1] for corner in square]
+    y_center = sum(y_center)/4000
+    
+    z_center=[corner[2] for corner in square]
+    z_center=sum(z_center)/4000 # Divide by 4 and 1000 to get in meters
+    
+    center=[x_center,y_center,z_center]
+
+    center=np.asarray(center)
+    
+    return center
+
 
 if __name__ == "__main__":
     
+    dir = path = r'C: \Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
+    
+    """CAD Center Coordinates"""
+    #Get Theoretical ARUCO center positions in CAD (ground truth) Coordinates in meters
+    #in mm
+    
+    upperL = [[-105.50, 124.64, - 120.13], [-84.50, 124.64, -120.13],
+            [-84.50, 124.63, -99.13], [-105.50, 124.63, -99.13]]
+    upperR = [[84.50, 124.64, -120.13], [105.50, 124.64, -120.13],
+            [105.50, 124.63, -99.13], [84.50, 124.63, -99.13]]
+    lowerL = [[-106.47, 119.50, -28.0], [-85.47, 119.50, -28.00],
+            [-85.47, 119.50, -7.00], [-106.47, 119.50, -7.00]]
+    lowerR = [[85.47, 119.50, -28.00], [106.47, 119.50, -28.00],
+            [106.47, 119.50, -7.00], [85.47, 119.50, -7.00]]
+
+    sup_left = stereoRGB_depth(upperL)
+    sup_right = stereoRGB_depth(upperR)
+    inf_left = stereoRGB_depth(lowerL)
+    inf_right = stereoRGB_depth(lowerR)
+
+    #CAD reference points ( center of aruco markers) in METERS
+    #Shape (4,3)
+    cad_ref = np.asarray([sup_left, sup_right, inf_right, inf_left])
+    #print(cad_ref.shape)
+    
+    
+    """Initialize Parameters for down_sampling PC"""
     voxel_size=1e-15
     radius_normal = voxel_size * 2
     
-    #Example target
-    target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V8ScaledownAgain_PLY.PLY')
-    ##target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\CaptureFrame_PLY32.ply')
+    
+    """Load Ground Truth (CAD) PLY """
+    ## in METERS
+    
+    target = o3d.io.read_point_cloud(
+        r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V10ACTUALmeters.PLY')
     
     
     ##target_down = preprocess_point_cloud(target, voxel_size)
     ##print(target)
     
-    #without downsampling function- Must estimate normals here
+    
+    """Estimate Normals"""
+    #No downsampling function
     target.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     
     
+    
+    """Initialize Camera Parameters and Settings"""
     #Camera Parameter Path
     path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
 
@@ -93,14 +158,21 @@ if __name__ == "__main__":
 
     #Calll aruco dictionary
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
+    
+    #Aruco marker length
+    markerlen = 2.0/100  # Square dimension [m]
 
     #Initialize aruco IDs used for polygon shape: top left bottom left, top right and  bottom right
     #arucoIDs=[2,35,100,200]
-    #21040 KR: add aruco ID's for Male Manikin test
+    #21040 KR: add aruco ID's for Male Manikin test and back phantom!
     arucoIDs = [4, 3, 300, 400]
     
     #Initialize Polygon Corners
     poly_corners = [None]*4
+    
+    #Create empty lists to store marker translation and rotation vectors
+    id_rvec=[None]*4
+    id_tvec=[None]*4
     
     # Create a pipeline
     pipeline = rs.pipeline()
@@ -125,8 +197,7 @@ if __name__ == "__main__":
     # Get depth sensor's depth scale
     depth_scale = depth_sensor.get_depth_scale()
 
-    # We will not display the background of objects more than
-    #  clipping_distance_in_meters meters away
+    # We will not display the background of objects more than clipping_distance_in_meters meters away
     clipping_distance_in_meters = 3  # 3 meter
     clipping_distance = clipping_distance_in_meters / depth_scale
 
@@ -185,23 +256,43 @@ if __name__ == "__main__":
             
             #Markers were detected
             if ids is not None:
-                
+                                
                 #If 4 Markers were detected
                 if len(corners) == 4:
                         for i, id in enumerate(ids):
                             #print('ID index', i, 'Value',id)
                             if id == arucoIDs[0]:
                                 poly_corners[0] = corn_sq[i, 0, :]
+                                id_rvec[0], id_tvec[0], markerPoints = aruco.estimatePoseSingleMarkers(
+                                    corners[i], markerlen, camera_matrix, dist_coef)
                             elif id == arucoIDs[1]:
                                 poly_corners[1] = corn_sq[i, 1, :]
+                                id_rvec[1], id_tvec[1], markerPoints = aruco.estimatePoseSingleMarkers(
+                                    corners[i], markerlen, camera_matrix, dist_coef)
                             elif id == arucoIDs[2]:
                                 poly_corners[2] = corn_sq[i, 2, :]
+                                id_rvec[2], id_tvec[2], markerPoints = aruco.estimatePoseSingleMarkers(
+                                    corners[i], markerlen, camera_matrix, dist_coef)
                             elif id == arucoIDs[3]:
                                 poly_corners[3] = corn_sq[i, 3, :]
+                                id_rvec[3], id_tvec[3], markerPoints = aruco.estimatePoseSingleMarkers(
+                                    corners[i], markerlen, camera_matrix, dist_coef)
                             else:
                                 print('Another ID was detected', id)
                         #Draw the polyline border
                         pts = np.array([poly_corners],np.int32)
+                        
+                        id_tvec=np.asarray(id_tvec)
+                        id_tvec=np.reshape(id_tvec,(4, 3))
+                        
+                        #Print id_tvecs
+                        print('id_tvecs',id_tvec)
+                        #print('id_tvecs shape',id_tvec.shape)
+                        
+                        #Pre-registration transformation matrix
+                        pre_reg = initialAlignment(id_tvec, cad_ref)
+                        #print(pre_reg)
+                        
                         
                         #Draw Polygon Border
                         cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
@@ -221,11 +312,12 @@ if __name__ == "__main__":
                         
                         #Convert Color to RGB
                         color_seg = cv2.cvtColor(color_seg, cv2.COLOR_BGR2RGB)
-                        ###########Proceed with PC Visualization########
+                        
+                        """Proceed with PC Visualization"""
                         depth_od3 = o3d.geometry.Image(depth_seg)
                         color_temp_od3 = o3d.geometry.Image(color_seg)
                         
-                        #RGBD Generation
+                        """RGBD Generation"""
                         #Open3D assumed that color and depth image are synchronized and registered in the same coordinate frame
                         #Set to false to preserve 8-bit color channels
                         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
@@ -240,39 +332,42 @@ if __name__ == "__main__":
                         temp.transform(flip_transform)
                         
                         #print("Number of points", (np.asarray(temp.points).shape))
+                        #Assign values
                         pcd.points = temp.points
                         pcd.colors = temp.colors
                         
                         source=temp
                         
-                        ###source_down = preprocess_point_cloud(source, voxel_size=1e-5)
-                        source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+                        """ICP Registration"""
+                        # ###source_down = preprocess_point_cloud(source, voxel_size=1e-5)
+                        # source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
                         
-                        #####TRY ICP#####
+                        # #####TRY ICP#####
                         
-                        #Threshold= the maximum distance in which the search tried to find a correspondence for each point
-                        #Fitness=measures the overlapping area (# of inlier correspondences / # of points in target). The higher the better.
-                        threshold = 10
+                        # #Threshold= the maximum distance in which the search tried to find a correspondence for each point
+                        # #Fitness=measures the overlapping area (# of inlier correspondences / # of points in target). The higher the better.
+                        # threshold = 10
+
+                        # #Random intial transformation
+                        # current_transformation = np.identity(4)
                         
-                        current_transformation = np.identity(4)
+                        # print("source",source.points)
+                        # print('temp',target.points)
                         
-                        print("source",source.points)
-                        print('temp',target.points)
+                        # # reg_p2p = o3d.pipelines.registration.registration_icp(
+                        # #     source, target, threshold, current_transformation,
+                        # #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
                         
+                        
+                        # #TransformationEstimation PointToPoint: provides function to compute the residuals and Jacobian matrices of the P2p ICP objective.
+                        # #registration_icp takes it as a parameterand runs p2p ICP to obtain results
                         # reg_p2p = o3d.pipelines.registration.registration_icp(
                         #     source, target, threshold, current_transformation,
-                        #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
-                        
-                        
-                        #TransformationEstimation PointToPoint: provides function to compute the residuals and Jacobian matrices of the P2p ICP objective.
-                        #registration_icp takes it as a parameterand runs p2p ICP to obtain results
-                        reg_p2p = o3d.pipelines.registration.registration_icp(
-                            source, target, threshold, current_transformation,
-                            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-                            o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20))
-                        print(reg_p2p)
-                        print("Transformation is:")
-                        print(reg_p2p.transformation)
+                        #     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+                        #     o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20))
+                        # print(reg_p2p)
+                        # print("Transformation is:")
+                        # print(reg_p2p.transformation)
                         
                        
                         
@@ -293,13 +388,15 @@ if __name__ == "__main__":
                         
                         if keyboard.is_pressed('Enter'):
                             print("Captured")
-                             #Write PCD
-                            o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
+                            #Write PCD
+                            #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
                             #WritePLY
-                            o3d.io.write_point_cloud("CaptureFrame_PLY"+str(frame_count)+".ply", temp)
-                        
+                            o3d.io.write_point_cloud("CaptureBackFrame_PLY"+str(frame_count)+".ply", temp)
+                            #save pre-reg as numpy array
+                            np.save("preT"+str(frame_count), pre_reg)
+                            
                         if keyboard.is_pressed('q'):  # if key 'q' is pressed
-                            print('You Pressed A Key!')
+                            print('You Pressed quit!')
                             break  # finishing the loop
                 else:
                     pts = None
