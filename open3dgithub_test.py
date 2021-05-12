@@ -10,7 +10,11 @@
 # Based off: https://github.com/intel-isl/Open3D/blob/master/examples/python/reconstruction_system/sensors/realsense_pcd_visualizer.py
 ###################################################################################
 
+#### 
+# Final implementation
+# Estimate ~20fps
 
+####
 
 import pyrealsense2 as rs
 import numpy as np
@@ -55,25 +59,30 @@ if __name__ == "__main__":
 
     # Using preset HighAccuracy for recording
     depth_sensor.set_option(rs.option.visual_preset, Preset.HighAccuracy)
+    #The “High Accuracy” preset will impose stricter criteria, and will only provide those depth
+    #values that are generated with very high confidence. This will give a less dense depth map
+    #in general but is very good for autonomous robots where false depth, aka. Hallucinations,
+    #are much worse than no depth. 
+    
     
     #KR Turn ON Emitter
     depth_sensor.set_option(rs.option.emitter_always_on, 1)
 
-    # Getting the depth sensor's depth scale (see rs-align example for explanation)
+    # Get depth sensor's depth scale 
     depth_scale = depth_sensor.get_depth_scale()
 
     # We will not display the background of objects more than
     #  clipping_distance_in_meters meters away
     clipping_distance_in_meters = 3  # 3 meter
     clipping_distance = clipping_distance_in_meters / depth_scale
-    # print(depth_scale)
+    
 
     # Create an align object
-    # rs.align allows us to perform alignment of depth frames to others frames
-    # The "align_to" is the stream type to which we plan to align depth frames.
+    # rs.align allows us to perform alignment of depth frames to others frames. Here RGB.
     align_to = rs.stream.color
     align = rs.align(align_to)
-
+    
+    #initialize visualizer
     vis = o3d.visualization.Visualizer()
     vis.create_window()
 
@@ -82,6 +91,7 @@ if __name__ == "__main__":
 
     # Streaming loop
     frame_count = 0
+    #frame_count= False
     try:
         while True:
 
@@ -101,15 +111,23 @@ if __name__ == "__main__":
             # Validate that both frames are valid
             if not aligned_depth_frame or not color_frame:
                 continue
-
-            depth_image = o3d.geometry.Image(
+            
+            #Numpy array equivalent
+            depth_image = np.asanyarray(aligned_depth_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+            
+            depth_od3 = o3d.geometry.Image(depth_image)
+            color_temp_od3 = o3d.geometry.Image(color_image)
+            
+            """
+            depth_img = o3d.geometry.Image(
                 np.array(aligned_depth_frame.get_data()))
             color_temp = np.asarray(color_frame.get_data())
             color_image = o3d.geometry.Image(color_temp)
-
+            """
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-                color_image,
-                depth_image,
+                color_temp_od3,
+                depth_od3,
                 depth_scale=1.0 / depth_scale,
                 depth_trunc=clipping_distance_in_meters,
                 convert_rgb_to_intensity=False)
@@ -121,6 +139,7 @@ if __name__ == "__main__":
             pcd.colors = temp.colors
 
             if frame_count == 0:
+                #if frame_count== False:
                 vis.add_geometry(pcd)
 
             vis.update_geometry(pcd)
@@ -130,6 +149,7 @@ if __name__ == "__main__":
             process_time = datetime.now() - dt0
             print("FPS: " + str(1 / process_time.total_seconds()))
             frame_count += 1
+            #frame_count=True
 
     finally:
         pipeline.stop()
