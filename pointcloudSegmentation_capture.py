@@ -69,7 +69,7 @@ def preprocess_point_cloud(pointcloud, voxel_size):
 
 #Input CAD position coordinates for all aruco position corners and return their center coordinates
 #in METERS
-def stereoRGB_depth(square):
+def centercalc(square):
 
     #Inputs:
 
@@ -114,10 +114,12 @@ if __name__ == "__main__":
     lowerR = [[85.47, 119.50, -28.00], [106.47, 119.50, -28.00],
             [106.47, 119.50, -7.00], [85.47, 119.50, -7.00]]
 
-    sup_left = stereoRGB_depth(upperL)
-    sup_right = stereoRGB_depth(upperR)
-    inf_left = stereoRGB_depth(lowerL)
-    inf_right = stereoRGB_depth(lowerR)
+
+    
+    sup_left = centercalc(upperL)
+    sup_right = centercalc(upperR)
+    inf_left = centercalc(lowerL)
+    inf_right = centercalc(lowerR)
 
     #CAD reference points ( center of aruco markers) in METERS
     #Shape (4,3)
@@ -133,7 +135,7 @@ if __name__ == "__main__":
     """Load Ground Truth (CAD) PLY """
     ## in METERS
     
-    target = o3d.io.read_point_cloud(
+    source = o3d.io.read_point_cloud(
         r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V10ACTUALmeters.PLY')
     
     
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     
     """Estimate Normals"""
     #No downsampling function
-    target.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     
     
     
@@ -286,11 +288,23 @@ if __name__ == "__main__":
                         id_tvec=np.reshape(id_tvec,(4, 3))
                         
                         #Print id_tvecs
-                        print('id_tvecs',id_tvec)
+                        #print('id_tvecs',id_tvec)
                         #print('id_tvecs shape',id_tvec.shape)
                         
                         #Pre-registration transformation matrix
-                        pre_reg = initialAlignment(id_tvec, cad_ref)
+                        #SOURCE=CAD,TARGET=Intel
+                        
+                        dif=cad_ref[0]-cad_ref[1]
+                        dif2=id_tvec[0]-id_tvec[1]
+                        
+                        norm1=np.linalg.norm(dif)
+                        norm2=np.linalg.norm(dif2)
+                        
+                        print("norm CAD",norm1)
+                        print("norm RS",norm2)
+                        
+                        pre_reg = initialAlignment(cad_ref,id_tvec)
+                    
                         #print(pre_reg)
                         
                         
@@ -336,9 +350,12 @@ if __name__ == "__main__":
                         pcd.points = temp.points
                         pcd.colors = temp.colors
                         
-                        source=temp
+                        target=temp
                         
                         """ICP Registration"""
+                        
+                        
+                        ### 210512: MAKE SURE TO CHANGE SOURCE/TARGET. SOURCE=CAD
                         # ###source_down = preprocess_point_cloud(source, voxel_size=1e-5)
                         # source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
                         
