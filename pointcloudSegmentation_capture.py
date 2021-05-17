@@ -67,43 +67,13 @@ def preprocess_point_cloud(pointcloud, voxel_size):
         search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
     return pointcloud_down
 
-#Input CAD position coordinates for all aruco position corners and return their center coordinates
-#in METERS
-def centercalc(square):
-
-    #Inputs:
-
-    #corners [[Nx4] and their corresponding pixels]
-    #N is number of markers
-    #Recall that order of corners are clockwise
-    """Averaging"""
-    #Get average x and y coordinate for all Nx4 corners
-    #print('corners', square)
-    #Ensure integer pixels
-    
-    x_center=[corner[0] for corner in square]
-    x_center=sum(x_center)/4000
- 
-    y_center = [corner[1] for corner in square]
-    y_center = sum(y_center)/4000
-    
-    z_center=[corner[2] for corner in square]
-    z_center=sum(z_center)/4000 # Divide by 4 and 1000 to get in meters
-    
-    center=[x_center,y_center,z_center]
-
-    center=np.asarray(center)
-    
-    return center
-
 
 if __name__ == "__main__":
     
     dir = path = r'C: \Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
     
     """CAD Center Coordinates"""
-    #Get Theoretical ARUCO center positions in CAD (ground truth) Coordinates in meters
-    #in mm
+    #CAD aruco Markers vertices coordinate [x,y,z] in mm    
     
     upperL = [[-105.50, 124.64, - 120.13], [-84.50, 124.64, -120.13],
             [-84.50, 124.63, -99.13], [-105.50, 124.63, -99.13]]
@@ -114,22 +84,25 @@ if __name__ == "__main__":
     lowerR = [[85.47, 119.50, -28.00], [106.47, 119.50, -28.00],
             [106.47, 119.50, -7.00], [85.47, 119.50, -7.00]]
 
+    upperL = np.asarray(upperL)
+    cen_UL = np.mean(upperL, axis=0)
 
-    
-    sup_left = centercalc(upperL)
-    sup_right = centercalc(upperR)
-    inf_left = centercalc(lowerL)
-    inf_right = centercalc(lowerR)
+    upperR = np.asarray(upperR)
+    cen_UR = np.mean(upperR, axis=0)
 
-    #CAD reference points ( center of aruco markers) in METERS
-    #Shape (4,3)
-    cad_ref = np.asarray([sup_left, sup_right, inf_right, inf_left])
-    #print(cad_ref.shape)
+    lowerL = np.asarray(lowerL)
+    cen_LL = np.mean(lowerL, axis=0)
+
+    lowerR = np.asarray(lowerR)
+    cen_LR = np.mean(lowerR, axis=0)
+
+    # (4,3) shapate in [m] units
+    cad_ref = np.asarray([cen_UL, cen_UR, cen_LR, cen_LL])/1000
     
-    
-    """Initialize Parameters for down_sampling PC"""
-    voxel_size=1e-15
-    radius_normal = voxel_size * 2
+
+    # """Initialize Parameters for down_sampling PC"""
+    # voxel_size=1e-15
+    # radius_normal = voxel_size * 2
     
     
     """Load Ground Truth (CAD) PLY """
@@ -217,6 +190,8 @@ if __name__ == "__main__":
 
     # Streaming loop
     frame_count = 0
+
+    
     #frame_count= False
     try:
         while True:
@@ -288,21 +263,36 @@ if __name__ == "__main__":
                         id_tvec=np.reshape(id_tvec,(4, 3))
                         
                         #Print id_tvecs
-                        #print('id_tvecs',id_tvec)
+                        print('id_tvecs',id_tvec)
                         #print('id_tvecs shape',id_tvec.shape)
                         
+                        #a= CAD
+                        #b= ARUCO
+
+                        #difa_01=cad_ref[0]-cad_ref[1]
+                        difb_01=id_tvec[0]-id_tvec[1]
+                        
+                        #difa_12 = cad_ref[1]-cad_ref[2]
+                        difb_12 = id_tvec[1]-id_tvec[2]
+                        
+                        ##Get distances!
+                        #norma_01=np.linalg.norm(difa_01)
+                        normb_01=np.linalg.norm(difb_01)
+                        
+                        # print("norm CAD from 0 to 1",norma_01)
+                        # print("norm RS from 0 to 1", normb_01)
+                        
+                        #norma_12=np.linalg.norm(difa_12)
+                        normb_12=np.linalg.norm(difb_12)
+                        
+                        norm_ARUCO=np.array([normb_01,normb_12])
+                        
+                        # print("norm CAD from 1 to 2",norma_12)
+                        # print("norm RS from 1 to 2", normb_12)
+                        
                         #Pre-registration transformation matrix
-                        #SOURCE=CAD,TARGET=Intel
                         
-                        dif=cad_ref[0]-cad_ref[1]
-                        dif2=id_tvec[0]-id_tvec[1]
-                        
-                        norm1=np.linalg.norm(dif)
-                        norm2=np.linalg.norm(dif2)
-                        
-                        print("norm CAD",norm1)
-                        print("norm RS",norm2)
-                        
+                        #SOURCE=CAD,TARGET=Intel                                               
                         pre_reg = initialAlignment(cad_ref,id_tvec)
                     
                         #print(pre_reg)
@@ -352,6 +342,10 @@ if __name__ == "__main__":
                         
                         target=temp
                         
+                        
+                        
+                        
+                        
                         """ICP Registration"""
                         
                         
@@ -366,6 +360,8 @@ if __name__ == "__main__":
                         # threshold = 10
 
                         # #Random intial transformation
+                        """Use the preregistration to speed up ICP"""
+                        # current_transformation=pre_reg
                         # current_transformation = np.identity(4)
                         
                         # print("source",source.points)
@@ -404,13 +400,15 @@ if __name__ == "__main__":
                         #frame_count=True
                         
                         if keyboard.is_pressed('Enter'):
-                            print("Captured")
+                            
                             #Write PCD
                             #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
                             #WritePLY
-                            o3d.io.write_point_cloud("CaptureBackFrame_PLY"+str(frame_count)+".ply", temp)
+                            o3d.io.write_point_cloud("CaptureBackFrameDEBUG_PLY"+str(frame_count)+".ply", temp)
                             #save pre-reg as numpy array
-                            np.save("preT"+str(frame_count), pre_reg)
+                            np.save("DebugpreT"+str(frame_count), pre_reg)
+                            np.save('id_tvec'+str(frame_count), id_tvec)
+                            print("Captured")
                             
                         if keyboard.is_pressed('q'):  # if key 'q' is pressed
                             print('You Pressed quit!')
@@ -441,3 +439,11 @@ if __name__ == "__main__":
         pipeline.stop()
     #Close Open3D Window
     vis.destroy_window()
+    
+    #Calculate key distance from CAD model ( ground truth)
+    #0-1: Superior Left to Superior Right
+    #1-2: Superior Right to Inferior Right
+    difa_01 = cad_ref[0]-cad_ref[1]
+    difa_12 = cad_ref[1]-cad_ref[2]
+    norma_01 = np.linalg.norm(difa_01)
+    norma_12 = np.linalg.norm(difa_12)
