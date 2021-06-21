@@ -14,6 +14,13 @@ import os
 import keyboard
 from imutils import perspective
 
+def bit_tranf(rgb):
+    #input rgb 8-bit
+    #16bitColor = ((8bitColor + 1)*256) - 1 
+    rgbd_16=((rgb+1)*256)-1
+    rgbd_16=np.array(rgbd_16,np.uint16)
+    return rgbd_16
+
 
 def f(x):
     val_min=0
@@ -130,7 +137,7 @@ try:
         if not aligned_depth_frame or not color_frame:
             continue
 
-        
+        #D-16bit, RGB 8bit
         depth_image = np.asanyarray(aligned_depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
              
@@ -192,40 +199,53 @@ try:
         #Get depth image interms of  milimeters 
         #depth_true=depth_selection*depth_scale*1000 to get in mm
         depth_true = depth_image*depth_scale*1000
-                
+         
+        """       
         #Scale  pixels  from 0-255. Where 255 corresponds  to the max working distance
         # d>dwork is set to 0
         norm_depth=f(depth_true)
         norm_depth=np.uint8(norm_depth)
         norm_depth[norm_depth>255]=0
-
+        """
+        
+        """
         # Render images:
         #   depth align to color on left. Depth on right
         #Show the full color image
         depth_colormap = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
         images = np.hstack((color_image, depth_colormap))
         #images = np.hstack((color_image, depth_image)) 
-       
-       
+        """
+        
         #First create the image with alpha channel (selection)
-        rgba = cv2.cvtColor(color_image, cv2.COLOR_RGB2RGBA)
+        #rgba = cv2.cvtColor(color_image, cv2.COLOR_RGB2RGBA)
 
         #Then assign the mask to the last channel of the image
-        rgba[:, :, 3] = norm_depth
+        #rgba[:, :, 3] = norm_depth
         
-
+        """ EDIT 04-17"""
+        #rgbd_16 dtype uint16
+        rgbd_16=cv2.cvtColor(bit_tranf(color_image), cv2.COLOR_RGB2RGBA)
+        rgbd_16[:, :, 3]=depth_image
+        rgbd_16 = np.asanyarray(rgbd_16,dtype=np.uint16)
+        #print("data type",type(rgbd_16))
+        
+        
         """Initialize Frames"""
+        """
         cv2.namedWindow('Aligned RGB-D Frames', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('Aligned RGB-D Frames',images)
         key = cv2.waitKey(1)       
-
+        """
+        
         if pts is not None:
         #Enter to begin capturing images
             if keyboard.is_pressed('Enter'):
                 count += 1
                 
                 cv2.imwrite(os.path.join(path_rgb, str(count).zfill(4)+'.png'), color_image)
-                cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
+                #cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgba)
+                cv2.imwrite(os.path.join(path_rgba, str(count).zfill(4)+'.png'), rgbd_16)
                 cv2.imwrite(os.path.join(path_mask, str(count).zfill(4)+'.png'), binary_mask)
                 cv2.imwrite(os.path.join(path_depth, str(count).zfill(4)+'.png'), norm_depth)
                 cv2.imwrite(os.path.join(path_TRUEdepth, str(count).zfill(4)+'.png'), depth_image)
@@ -240,7 +260,8 @@ try:
                 print("Number of undetected ARUCO frames",count2)
                 #210408: Capturing images with ARUCO, so if no polygon is detected then we ignore
                 cv2.imwrite(os.path.join(path_rgb_test, str(count).zfill(4)+'.png'), color_image)
-                cv2.imwrite(os.path.join(path_rgba_test, str(count).zfill(4)+'.png'), rgba)
+                #cv2.imwrite(os.path.join(path_rgba_test, str(count).zfill(4)+'.png'), rgba)
+                cv2.imwrite(os.path.join(path_rgba_test, str(count).zfill(4)+'.png'), rgbd_16)
                 cv2.imwrite(os.path.join(path_depth_test, str(count).zfill(4)+'.png'), norm_depth)
                 cv2.imwrite(os.path.join(path_TRUEdepth_test, str(count).zfill(4)+'.png'), depth_image)
                 #print("Total images captured:", count)
