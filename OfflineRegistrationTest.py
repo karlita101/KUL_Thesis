@@ -46,21 +46,6 @@ def invertMat(transformation):
     return(inverse)
 
 
-
-def draw_registration_result(source, target, transformation):
-    source_temp = copy.deepcopy(source)
-    target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])
-    target_temp.paint_uniform_color([0, 0.651, 0.929])
-    source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp],
-                                      zoom=0.4459,
-                                      front=[0.9288, -0.2951, -0.2242],
-                                      lookat=[1.6784, 2.0612, 1.4451],
-                                      up=[-0.3402, -0.9189, -0.1996])
-    
-    
-
 """Load Data"""
 
 
@@ -70,10 +55,14 @@ def draw_registration_result(source, target, transformation):
 
 
 # Source= PC from CAD
-#CAD MODEL
-source = o3d.io.read_point_cloud(
-    r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V10ACTUALmeters.PLY')
+#CAD MODEL {course/walls}
+#source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V10ACTUALmeters.PLY')
 
+#CAD MODEL {course/nowalls}
+#source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V11RemoveWalls.PLY')
+
+#Remeshed Source
+source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V11RemoveWalls_RemeshMidpoint.PLY')
 
 #Target= PC from RealSense
 target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\CaptureBackFrameDEBUG_PLY30.ply')
@@ -81,151 +70,48 @@ target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_
 pre_reg = np.load(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\DebugpreT30.npy')
 
 
-"""Kenan's Example"""
+o3d.visualization.draw_geometries([target])
 
-# a = np.array([[0, 0, 0], [10, 0, 0], [0, 10, 0], [10, 10, 0]])
-# b = np.array([[0, 0, 0], [0, 10, 0], [0, 0, 10], [0, 10, 10]])
-
-# transformation = initialAlignment(a, b)
-# print(" transformation matrix")
-# print(transformation)
-
-# newA = []
-# for i in a.tolist():
-#     newI = np.array(i+[1])
-#     ii = np.dot(transformation, newI)
-#     newA.append(ii[:3])
-    
-# print("transformed A: it should be very very close to 'b'")
-# print(newA)
-# newA = np.asarray(newA)
-# print("To proof it, diff: b-newA")
-# print(np.sum(b-newA))
-# print("so newA (transformed a equals to b. So my pre-reg is correct)")
-
-
-
-
-"""See if the Inverse Matrix is Correct"""
-"""Apply a transformation to a PC, and undo it with Inverse Transf. Matrix"""
-
-#Get Arbitrary coordinate frame 
-
-# mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
-# T = np.eye(4)
-# T[:3, :3] = mesh.get_rotation_matrix_from_xyz((0, np.pi / 3, np.pi / 2))
-# T[0, 3] = 1
-# T[1, 3] = 1.3
-# print(T)
-
-# new_inv=invertMat(T)
-
-# #transform mesh
-# mesh_t = copy.deepcopy(mesh).transform(T)
-# #check to see if it undoes
-# mesh_inv = copy.deepcopy(mesh_t).transform(new_inv)
-# o3d.visualization.draw_geometries([mesh, mesh_t])
-# o3d.visualization.draw_geometries([mesh, mesh_t, mesh_inv])
-# print("Here we see that the inverse matrix is correct, when we apply the original matrix, and the the inverse, it is at the origina spot")
-
-
-"""Let's see if we can do the same just on the source using T transformation"""
-
-# #CAD
-# source_temp = copy.deepcopy(source)
-# source_temp.transform(T)
-# source_undo = copy.deepcopy(source_temp).transform(new_inv)
-# source_temp.paint_uniform_color([0, 0, 1])
-# source_undo.paint_uniform_color([1, 1, 0])
-# o3d.visualization.draw_geometries([source, source_temp])
-# o3d.visualization.draw_geometries([source_temp, source_undo])
-# print("Here we see that it undoes it as well!")
 
 
 """Again but witht the preregistration"""
-flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
 
+#flip normals of Pre-reg Transformation
 T = pre_reg
-
+flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
 T=np.matmul(flip_transform,T)
-#left_right_hand = np.array([[1, 0, 0,0], [0, - 1, 0,0],[0,  0, 1, 0], [0, 0, 0, 1]])
-#T = np.matmul(left_right_hand, pre_reg)
-#print(T)
-#new_inv = invertMat(T)
 
-#CAD
-
-
-# source = source.transform(flip_transform)
+#Source Copy (Orange)
 source_temp = copy.deepcopy(source)
-"""Can we transform and untransform"""
-
-# source_temp.transform(T)
-# source_undo = copy.deepcopy(source_temp).transform(new_inv)
-# source_temp.paint_uniform_color([0, 0, 1])
-# source_undo.paint_uniform_color([1, 1, 0])
-# o3d.visualization.draw_geometries([source, source_temp])
-# o3d.visualization.draw_geometries([source_temp, source_undo])
-# o3d.visualization.draw_geometries([source_temp, source_undo])
-# print("Here we see that it undoes it AGAIN!")
-
-"""Let's try to registration: source.transform(T) keep target the same"""
-# source_temp.paint_uniform_color([0, 0, 1])
-# source_temp.transform(new_inv)
-# source_x=copy.deepcopy(source).transform(T)
-# source_x.paint_uniform_color([0, 1, 0])
-# target_temp = copy.deepcopy(target).transform(new_inv)
-# target_temp.paint_uniform_color([1,0.8,0])
-# #o3d.visualization.draw_geometries([source_temp, target])
-# o3d.visualization.draw_geometries(
-#     [source_temp, source, target, source_x, target_temp])
-# print("NO")
-
-### Apply to Source###
-#source_temp.paint_uniform_color([0, 0, 1]) #Blue
-#source_temp.transform(new_inv) # Apply inverse T to source
+source_temp.paint_uniform_color([1, 0.706, 0])
+#Source Copy for Pre-reg
 source_x = copy.deepcopy(source).transform(T)  #Apply  T to source
-source_x.paint_uniform_color([0, 1, 0]) #Green
+source_x.paint_uniform_color([0, 0.651, 0.929])  # Green
+o3d.visualization.draw_geometries([source_x, source_temp, target])
 
-### Apply to Target###
-#target_temp = copy.deepcopy(target).transform(new_inv)
-#target_temp.paint_uniform_color([1, 0, 0])
-#target_x = copy.deepcopy(target).transform(T)
-#target_x.paint_uniform_color([0, 0.5, 0])
-#o3d.visualization.draw_geometries([source_temp, target])
-#o3d.visualization.draw_geometries([source_temp, source, target, source_x, target_temp,target_x])
-o3d.visualization.draw_geometries([source_x, source, target])
-
-
+"""Evaluate the initial registration (alignment)"""
+print("Initial alignment")
+threshold_1=0.5 #[m]
+evaluation = o3d.pipelines.registration.evaluate_registration(
+    source_temp, target, threshold_1, T)
+print("pre-registration eval",evaluation)
 
 #http: // www.open3d.org/docs/0.11.0/tutorial/pipelines/icp_registration.html
 #http://www.open3d.org/docs/0.11.0/tutorial/pipelines/global_registration.html
 #http://www.open3d.org/docs/release/python_api/open3d.geometry.PointCloud.html?highlight=transform#open3d.geometry.PointCloud.transform
 
-print("review the steps here!")
-print("Here in the global and local alignmnet the souce is.transformed()  ")
-print("The transformation is then to get the source into the target frame")
+# print("review the steps here!")
+# print("Here in the global and local alignmnet the souce is.transformed()  ")
+# print("The transformation is then to get the source into the target frame")
 
 
-print("It says about ICP")
-"""      the input are two point clouds and an initial transformation 
-      that roughly aligns the source point cloud to the target point cloud.
-      The output is a refined transformation that tightly aligns the two point clouds"""
+# print("It says about ICP")
+# """      the input are two point clouds and an initial transformation 
+#       that roughly aligns the source point cloud to the target point cloud.
+#       The output is a refined transformation that tightly aligns the two point clouds"""
       
       
-      
-      
-      
-      
-      
-
-"""Evaluate the initial registration (alignment)"""
-print("Initial alignment")
-evaluation = o3d.pipelines.registration.evaluate_registration(
-    source, target, 0.10, T)
-print(evaluation)
-
-reg_source=source.transform(T)
+ 
 
 """Calculate distance between transformed source to target"""
 # Open3D provides the method compute_point_cloud_distance to compute the distance 
@@ -233,18 +119,20 @@ reg_source=source.transform(T)
 # I.e., it computes for each point in the source point cloud the distance to the 
 # closest point in the target point cloud.
 
+#reg_source = copy.deepcopy(source).transform(T)
+reg_source = copy.deepcopy(source_x)
+
 dist = reg_source.compute_point_cloud_distance(target)
 dist = np.asarray(dist)*1000 # to get in [m]
 #print(dist)
-print(np.shape(dist))
+# print(np.shape(dist))
 
 
-dist_pd = pd.DataFrame(dist)
-ax1 = dist_pd.boxplot(return_type="axes")  # BOXPLOT
-ax2 = dist_pd.plot(kind="hist", alpha=0.5, bins=1000)  # HISTOGRAM
-ax3 = dist_pd.plot(kind="line")  # SERIES
-plt.show()
-
+# dist_pd = pd.DataFrame(dist)
+# ax1 = dist_pd.boxplot(return_type="axes")  # BOXPLOT
+# ax2 = dist_pd.plot(kind="hist", alpha=0.5, bins=1000)  # HISTOGRAM
+# ax3 = dist_pd.plot(kind="line")  # SERIES
+# plt.show()
 
 
 
@@ -252,59 +140,119 @@ plt.show()
 trans_init=T
 threshold=10 #[m] so 
 reg_p2p = o3d.pipelines.registration.registration_icp(
-    source, target, threshold, trans_init,
+    source_temp, target, threshold, trans_init,
     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
     o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
-print(reg_p2p)
+print("ICP evalutation",reg_p2p)
 print("Transformation is:")
 print(reg_p2p.transformation)
-draw_registration_result(source, target, reg_p2p.transformation)
+
+source_icp =copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
 o3d.visualization.draw_geometries(
-    [copy.deepcopy(source).transform(reg_p2p.transformation), source, target])
+    [source_temp,reg_source,target])
 
 
 """Calculate distance between transformed source to target"""
+# Open3D provides the method compute_point_cloud_distance to compute the distance
+# from a source point cloud to a target point cloud.
+# I.e., it computes for each point in the source point cloud the distance to the
+# closest point in the target point cloud.
+
+
+dist_icp = source_icp.compute_point_cloud_distance(target)
+dist_icp = np.asarray(dist_icp)*1000  # to get in [mm]
+# #print(np.shape(dist))
+
+# dist_pd_icp = pd.DataFrame(dist_icp)
+# ax1 = dist_pd_icp.boxplot(return_type="axes")  # BOXPLOT
+# ax2 = dist_pd_icp.plot(kind="hist", alpha=0.5, bins=1000)  # HISTOGRAM
+# ax3 = dist_pd_icp.plot(kind="line")  # SERIES
+# plt.show()
 
 
 
 
 
 
+#define number of rows and columns for subplots
+nrow = 1
+ncol = 2
+
+
+# Get statistics
+mean_prereg, mean_icp = np.mean(dist), np.mean(dist_icp)
+print('Pre_reg Mean', mean_prereg)
+print('ICP Mean', mean_icp)
+
+std_prereg, std_icp = np.std(dist), np.std(dist_icp)
+print('Pre_reg std', std_prereg)
+print('ICP std', std_icp)
+
+med_prereg, med_icp = np.median(dist), np.median(dist_icp)
+print('Pre_reg med', med_prereg)
+print('ICP med', med_icp)
+
+# these are matplotlib.patch.Patch properties
+props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+
+textstr_preg = '\n'.join((
+    r'$\mu=%.2f$' % (mean_prereg, ),
+    r'$\mathrm{median}=%.2f$' % (med_prereg, ),
+    r'$\sigma=%.2f$' % (std_prereg, )))
+
+textstr_icp = '\n'.join((
+    r'$\mu=%.2f$' % (mean_icp, ),
+    r'$\mathrm{median}=%.2f$' % (med_icp, ),
+    r'$\sigma=%.2f$' % (std_icp, )))
 
 
 
 
+ 
+fig1, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+fig1.suptitle('Source to Target Point Cloud Distances')
+ax1.boxplot(dist,showmeans=True)
+ax2.boxplot(dist_icp, showmeans=True)
+
+
+#Add stats
+ax1.text(0.05, 0.95, textstr_preg, transform=ax1.transAxes, fontsize=14,
+         verticalalignment='top', bbox=props)
+ax2.text(0.05, 0.95, textstr_icp, transform=ax2.transAxes, fontsize=14,
+         verticalalignment='top', bbox=props)
+
+for ax in fig1.get_axes():
+    ax.set(ylabel='Source to Target Distances [mm]')  # xlabel='x-label'
+#Add title
+ax1.set_title('Pre-registration PC Distances')
+ax2.set_title('ICP PC Distances')
+fig1.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V11Back_remesh.png", dpi=150)
+plt.show()
 
 
 
 
+#Add density=1 to normalize bt the total number of count
+n_bins=50
+fig2, (ax3, ax4) = plt.subplots(1, 2, sharey=True, tight_layout=True)
+fig2.suptitle('Source to Target Point Cloud Distances')
+ax3.hist(dist, bins=n_bins)
+ax4.hist(dist_icp, bins=n_bins)
+
+ax3.text(0.05, 0.95, textstr_preg, transform=ax3.transAxes, fontsize=14,
+        verticalalignment='top', bbox=props)
+ax4.text(0.05, 0.95, textstr_icp, transform=ax4.transAxes, fontsize=14,
+         verticalalignment='top', bbox=props)
+
+for ax in fig2.get_axes():
+    ax.set(xlabel='Point Cloud Distances [mm]',ylabel='Frequency')  # 
+#Add title
+ax3.set_title('Pre-registration PC Distances')
+ax4.set_title('ICP PC Distances')
+    
+fig2.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V11Back_HIST_remesh.png", dpi=150)
+
+plt.show()
 
 
-"""Let's try to registration: source.transform(new_inv) keep target the same"""
-# source_OG = copy.deepcopy(source).paint_uniform_color([1, 0, 0])
-# source_temp.paint_uniform_color([0, 0, 1])
-# source_temp.transform(new_inv)
-# o3d.visualization.draw_geometries([source, target])
-# o3d.visualization.draw_geometries([target, source_temp, source_OG])
-# # print("NO")
-
-"""Let's try to registration: target.transform(new_inv) keep target the same"""
-# source_temp.paint_uniform_color([1, 0, 0])
-# #source_temp.transform(T)
-# target_temp = copy.deepcopy(target).transform(new_inv)
-# target_temp.paint_uniform_color([1, 1, 0])
-
-# o3d.visualization.draw_geometries([source_temp, target_temp])
-# o3d.visualization.draw_geometries([source_temp,target_temp,target])
-# # print("NO")
-
-
-"""BOTH T"""
-# source_OG = copy.deepcopy(source).paint_uniform_color([1, 0, 0])
-# source_temp.paint_uniform_color([0, 0, 1])
-# source_temp.transform(T)
-# target_temp = copy.deepcopy(target).transform(T)
-# o3d.visualization.draw_geometries([source_temp, target_temp])
-# o3d.visualization.draw_geometries([source_temp, target_temp,target,source_OG])
-# # print("NO")
 
