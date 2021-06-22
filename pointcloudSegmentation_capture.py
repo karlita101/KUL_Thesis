@@ -219,14 +219,14 @@ if __name__ == "__main__":
             color_image = np.asanyarray(color_frame.get_data())
 
             
-            #Detect Aruco
+            """Detect Aruco"""
             #Grayscale 
             gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
             arucoParameters = aruco.DetectorParameters_create()
             corners, ids, rejectedImgPoints = aruco.detectMarkers(
                 gray_image, aruco_dict, parameters=arucoParameters, cameraMatrix=camera_matrix, distCoeff=dist_coef)
 
-            #Draw detected markers on RGB image
+            """Draw detected markers on RGB image"""
             color_image=aruco.drawDetectedMarkers(color_image, corners,ids)
             aruco.drawDetectedMarkers(color_image, corners)
             corn_sq = np.squeeze(corners)
