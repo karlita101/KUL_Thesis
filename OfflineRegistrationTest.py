@@ -62,7 +62,11 @@ def invertMat(transformation):
 #source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V11RemoveWalls.PLY')
 
 #Remeshed Source
-source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V11RemoveWalls_RemeshMidpoint.PLY')
+#source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V11RemoveWalls_RemeshMidpoint.PLY')
+#Upper surface
+source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
+
+
 
 #Target= PC from RealSense
 target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\CaptureBackFrameDEBUG_PLY30.ply')
@@ -123,7 +127,7 @@ print("pre-registration eval",evaluation)
 reg_source = copy.deepcopy(source_x)
 
 dist = reg_source.compute_point_cloud_distance(target)
-dist = np.asarray(dist)*1000 # to get in [m]
+dist = np.asarray(dist)*1000 # to get in [mm]
 #print(dist)
 # print(np.shape(dist))
 
@@ -138,7 +142,7 @@ dist = np.asarray(dist)*1000 # to get in [m]
 
 """Then Apply p2p ICP"""
 trans_init=T
-threshold=10 #[m] so 
+threshold = 10  # [m] 	Maximum correspondence points-pair distance
 reg_p2p = o3d.pipelines.registration.registration_icp(
     source_temp, target, threshold, trans_init,
     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
@@ -226,7 +230,7 @@ for ax in fig1.get_axes():
 #Add title
 ax1.set_title('Pre-registration PC Distances')
 ax2.set_title('ICP PC Distances')
-fig1.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V11Back_remesh.png", dpi=150)
+fig1.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V12UpperSurf.png", dpi=150)
 plt.show()
 
 
@@ -250,7 +254,7 @@ for ax in fig2.get_axes():
 ax3.set_title('Pre-registration PC Distances')
 ax4.set_title('ICP PC Distances')
     
-fig2.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V11Back_HIST_remesh.png", dpi=150)
+fig2.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V12UpperSurf_HIST_remesh.png", dpi=150)
 
 plt.show()
 
