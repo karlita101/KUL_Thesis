@@ -269,34 +269,23 @@ if __name__ == "__main__":
                         #a= CAD
                         #b= ARUCO
 
-                        #difa_01=cad_ref[0]-cad_ref[1]
                         difb_01=id_tvec[0]-id_tvec[1]
-                        
-                        #difa_12 = cad_ref[1]-cad_ref[2]
                         difb_12 = id_tvec[1]-id_tvec[2]
-                        
                         ##Get distances!
-                        #norma_01=np.linalg.norm(difa_01)
                         normb_01=np.linalg.norm(difb_01)
-                        
                         # print("norm CAD from 0 to 1",norma_01)
                         # print("norm RS from 0 to 1", normb_01)
-                        
-                        #norma_12=np.linalg.norm(difa_12)
                         normb_12=np.linalg.norm(difb_12)
-                        
+                        #Assign to array
                         norm_ARUCO=np.array([normb_01,normb_12])
-                        
                         # print("norm CAD from 1 to 2",norma_12)
                         # print("norm RS from 1 to 2", normb_12)
                         
-                        #Pre-registration transformation matrix
-                        
-                        #SOURCE=CAD,TARGET=Intel                                               
+                        """Pre-registration transformation matrix"""
+                        #SOURCE=CAD
+                        #TARGET=Intel                                               
                         pre_reg = initialAlignment(cad_ref,id_tvec)
-                    
                         #print(pre_reg)
-                        
                         
                         #Draw Polygon Border
                         cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
@@ -306,7 +295,6 @@ if __name__ == "__main__":
                         cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
 
                         #Segment Depth and  RGB frame with binary mask 
-                        
                         depth_seg = cv2.bitwise_and(depth_image, depth_image, mask=binary_mask)
                         color_seg=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
                         #cv2.imshow("depth seg",depth_seg)
@@ -321,7 +309,7 @@ if __name__ == "__main__":
                         depth_od3 = o3d.geometry.Image(depth_seg)
                         color_temp_od3 = o3d.geometry.Image(color_seg)
                         
-                        """RGBD Generation"""
+                        """Create RGBD"""
                         #Open3D assumed that color and depth image are synchronized and registered in the same coordinate frame
                         #Set to false to preserve 8-bit color channels
                         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
@@ -340,7 +328,7 @@ if __name__ == "__main__":
                         pcd.points = temp.points
                         pcd.colors = temp.colors
                         
-                        target=temp
+                        #target=temp
                         
                         
                         
@@ -385,7 +373,6 @@ if __name__ == "__main__":
                        
                         
                         if frame_count == 0:
-                            #if frame_count== False:
                             vis.add_geometry(pcd)
                         
                         #Update_geometry
@@ -404,11 +391,24 @@ if __name__ == "__main__":
                             #Write PCD
                             #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
                             #WritePLY
-                            o3d.io.write_point_cloud("CaptureBackFrameDEBUG_PLY"+str(frame_count)+".ply", temp)
+                            
+
+                            o3d.io.write_point_cloud(
+                                "./210517PilotTest/pointclouds/"+"BackPLY"+str(frame_count)+".ply", temp)
                             #save pre-reg as numpy array
-                            np.save("DebugpreT"+str(frame_count), pre_reg)
-                            np.save('id_tvec'+str(frame_count), id_tvec)
+                            np.save(
+                                './210517PilotTest/preregmat/'+"preregT"+str(frame_count), pre_reg)
+                            
+                            #save aruco marker coordinates
+                            np.save(
+                                './210517PilotTest/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
                             print("Captured")
+                            
+                            #save aruco marker distances
+                            np.save(
+                                './210517PilotTest/distancesnpy/'+'normdist'+str(frame_count), norm_ARUCO)
+                            print("Captured")
+                            
                             
                         if keyboard.is_pressed('q'):  # if key 'q' is pressed
                             print('You Pressed quit!')
