@@ -287,14 +287,14 @@ if __name__ == "__main__":
                         pre_reg = initialAlignment(cad_ref,id_tvec)
                         #print(pre_reg)
                         
-                        #Draw Polygon Border
+                        """Draw Polygon Border"""
                         cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
                         
-                        #Create a binary mask ( 1 channel)
+                        """Create a binary mask ( 1 channel)"""
                         binary_mask=np.zeros((gray_image.shape),np.uint8)
                         cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
 
-                        #Segment Depth and  RGB frame with binary mask 
+                        """Segment Depth and  RGB frame with binary mask """
                         depth_seg = cv2.bitwise_and(depth_image, depth_image, mask=binary_mask)
                         color_seg=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
                         #cv2.imshow("depth seg",depth_seg)
@@ -329,11 +329,7 @@ if __name__ == "__main__":
                         pcd.colors = temp.colors
                         
                         #target=temp
-                        
-                        
-                        
-                        
-                        
+
                         """ICP Registration"""
                         
                         
