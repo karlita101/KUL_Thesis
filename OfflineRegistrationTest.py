@@ -69,9 +69,12 @@ source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_
 
 
 #Target= PC from RealSense
-target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\CaptureBackFrameDEBUG_PLY30.ply')
+#target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\CaptureBackFrameDEBUG_PLY30.ply')
+target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210623PilotTestInvestigatePC\pointclouds\BackPLY1318.ply')
 
-pre_reg = np.load(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\DebugpreT30.npy')
+#pre_reg = np.load(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\DebugpreT30.npy')
+pre_reg = np.load(
+    r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210623PilotTestInvestigatePC\preregmat\preregT1318.npy')
 
 
 o3d.visualization.draw_geometries([target])
@@ -154,7 +157,7 @@ print(reg_p2p.transformation)
 source_icp =copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
 o3d.visualization.draw_geometries(
     [source_temp,reg_source,target])
-
+o3d.visualization.draw_geometries([reg_source, target])
 
 """Calculate distance between transformed source to target"""
 # Open3D provides the method compute_point_cloud_distance to compute the distance
@@ -230,9 +233,10 @@ for ax in fig1.get_axes():
 #Add title
 ax1.set_title('Pre-registration PC Distances')
 ax2.set_title('ICP PC Distances')
-fig1.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V12UpperSurf.png", dpi=150)
+#fig1.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V12UpperSurf.png", dpi=150)
+fig1.savefig(
+    "./210623PilotTestInvestigatePC/EvaluationImg/PreRegICP_T1318_V12UpperSurf.png", dpi=150)
 plt.show()
-
 
 
 
@@ -254,7 +258,9 @@ for ax in fig2.get_axes():
 ax3.set_title('Pre-registration PC Distances')
 ax4.set_title('ICP PC Distances')
     
-fig2.savefig("./210512 Debug Reg 2_feedback/210519 Get BaselinePerformance/PreRegICP_DebugpreT30_V12UpperSurf_HIST_remesh.png", dpi=150)
+fig2.savefig(
+    "./210623PilotTestInvestigatePC/EvaluationImg/PreRegICP_T1318_V12UpperSurf_HIST.png", dpi=150)
+
 
 plt.show()
 

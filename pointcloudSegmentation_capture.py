@@ -388,22 +388,24 @@ if __name__ == "__main__":
                             #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
                             #WritePLY
                             
-
+                            
+                            #210623PilotTestInvestigatePC
+                            #./210517PilotTest/preregmat/'+"preregT"
                             o3d.io.write_point_cloud(
-                                "./210517PilotTest/pointclouds/"+"BackPLY"+str(frame_count)+".ply", temp)
+                                "./210623PilotTestInvestigatePC/pointclouds/"+"BackPLY"+str(frame_count)+".ply", temp)
                             #save pre-reg as numpy array
                             np.save(
-                                './210517PilotTest/preregmat/'+"preregT"+str(frame_count), pre_reg)
+                                './210623PilotTestInvestigatePC/preregmat/'+"preregT"+str(frame_count), pre_reg)
                             
                             #save aruco marker coordinates
                             np.save(
-                                './210517PilotTest/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
+                                './210623PilotTestInvestigatePC/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
                             print("Captured")
                             
                             #save aruco marker distances
-                            np.save(
-                                './210517PilotTest/distancesnpy/'+'normdist'+str(frame_count), norm_ARUCO)
-                            print("Captured")
+                            #np.save(
+                            #    './210517PilotTest/distancesnpy/'+'normdist'+str(frame_count), norm_ARUCO)
+                            #print("Captured")
                             
                             
                         if keyboard.is_pressed('q'):  # if key 'q' is pressed
@@ -443,3 +445,6 @@ if __name__ == "__main__":
     difa_12 = cad_ref[1]-cad_ref[2]
     norma_01 = np.linalg.norm(difa_01)
     norma_12 = np.linalg.norm(difa_12)
+
+    print("norm cad 01",norma_01)
+    print("norm cad 12", norma_12)

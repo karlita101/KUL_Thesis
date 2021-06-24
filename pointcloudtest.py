@@ -15,7 +15,7 @@ import keyboard
 import open3d as o3d
 from open3d import *
 import matplotlib.pyplot as plt
-
+import PIL.Image
 path_rgb = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/o3dtest/RGB'
 path_depth = 'C:/Users/karla/OneDrive/Documents/GitHub/KUL_Thesis/o3dtest/Depth'
 
@@ -151,6 +151,17 @@ finally:
     img_depth = o3d.io.read_image("o3dtest/Depth/0001.png")
     img_color = o3d.io.read_image("o3dtest/RGB/0001.png")
     
+    #MUST DO UNCHANGED TO KEEP uint16
+    depthval = cv2.imread("o3dtest/Depth/0001.png", cv2.IMREAD_UNCHANGED)
+    
+    image = PIL.Image.open('o3dtest/Depth/0001.png')
+    pixel = np.array(image)
+
+    print( "PIL:", pixel.dtype)
+
+    #print(type(depthval),)
+
+    
     #check=np.asarray(img_depth)
     #rint("check",check)
     #dif=save-check
@@ -159,10 +170,21 @@ finally:
     #depth_scale in *1000[mm]
     #Depth values larger than depth_trunc gets truncated to 0. The depth values will first be scaled and then truncated.
     #(working distance is 1.5m  or  1500mm)
+
+
+
+
+
+
+
     rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-        img_color, img_depth, depth_scale*1000, depth_trunc=2000, convert_rgb_to_intensity=False)
+        img_color, img_depth, depth_scale*1000, depth_trunc=2000, convert_rgb_to_intensity=True)
     pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
         rgbd_image, intrinsic_od3)
+    
+    
+    
+    
     
     # Flip it, otherwise the pointcloud will be upside down
     pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
@@ -172,8 +194,8 @@ finally:
     vis = o3d.visualization.Visualizer()
     vis.create_window()
     vis.add_geometry(pcd)
-    o3d.visualization.draw_geometries([pcd])
-    #o3d.visualization.ViewControl.set_zoom(vis.get_view_control(), 2)
+    #o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.ViewControl.set_zoom(vis.get_view_control(), 2)
     vis.run()
      
     
@@ -191,3 +213,5 @@ finally:
     plt.imshow(rgbd_image.depth)
     plt.show()
 
+
+vis.destroy_window()
