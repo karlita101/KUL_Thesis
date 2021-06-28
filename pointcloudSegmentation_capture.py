@@ -319,7 +319,7 @@ if __name__ == "__main__":
                         print(reg_p2p.transformation)
 
                         """Get Registered  PC"""
-                        source_icp =copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                        source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
                         
                         #"""Visualize"""
                         #o3d.visualization.draw_geometries([source_icp, target])
@@ -332,11 +332,11 @@ if __name__ == "__main__":
                         
                         if frame_count == 0:
                             vis.add_geometry(pcd)
-                            vis.add_geometry(source_icp)
+                            #vis.add_geometry(source_icp)
                         
                         #Update_geometry
                         vis.update_geometry(pcd)
-                        vis.update_geometry(source_icp)
+                        #vis.update_geometry(source_icp)
                         #Render new frame
                         vis.poll_events()
                         vis.update_renderer()
