@@ -50,6 +50,40 @@ def get_intrinsic_matrix(frame):
                                             intrinsics.ppy)
     return out
 
+#Trajectory path in vertical lienes bottom>  up
+def gettrajectory(start_point, end_point, w, l, path):
+    scan_start = start_point//(w+1)
+    scan_end = end_point//(w+1)
+
+    scan = scan_start
+    initial_point = start_point
+
+    trajectory = []
+
+    while (scan <= scan_end) and (scan >= scan_start):
+        #print("initial_point", initial_point)
+        #print("scan", scan)
+
+        #End value to scan to for each scan line
+        val_end = (scan+1)*(w+1)
+        #print('val end', val_end)
+        #if end value is within the same scan line
+        if (scan < (val_end)//(w+1)) and (end_point < val_end):
+            traj = path[initial_point:end_point+1]
+            #print(traj)
+            #print("Partial line")
+        #complete the whole scan line, and move on
+        else:
+            traj = path[initial_point:val_end]
+            #print(traj)
+            #print("Whole line")
+        #add grid path to global trajectory
+        np.append(trajectory, traj)
+        #update intial point to start off on the next interation
+        initial_point = (scan+1)*(w+1)
+        #next scan line
+        scan += 1
+        
 if __name__ == "__main__":
     
     dir = path = r'C: \Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
@@ -162,6 +196,9 @@ if __name__ == "__main__":
     pcd = o3d.geometry.PointCloud()
     flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
 
+    #June 28: path
+    path_pc = o3d.geometry.PointCloud()
+    
     # Streaming loop
     frame_count = 0
 
@@ -237,13 +274,11 @@ if __name__ == "__main__":
                         id_tvec=np.reshape(id_tvec,(4, 3))
                         
                         #Print id_tvecs
-                        print('id_tvecs',id_tvec)
+                        #print('id_tvecs',id_tvec)
                         #print('id_tvecs shape',id_tvec.shape)
                         
-                        #a= CAD
-                        #b= ARUCO
 
-                        difb_01=id_tvec[0]-id_tvec[1]
+                        """difb_01=id_tvec[0]-id_tvec[1]
                         difb_12 = id_tvec[1]-id_tvec[2]
                         ##Get distances!
                         normb_01=np.linalg.norm(difb_01)
@@ -253,9 +288,11 @@ if __name__ == "__main__":
                         #Assign to array
                         norm_ARUCO=np.array([normb_01,normb_12])
                         # print("norm CAD from 1 to 2",norma_12)
-                        # print("norm RS from 1 to 2", normb_12)
+                        # print("norm RS from 1 to 2", normb_12)"""
                         
                         """Pre-registration transformation matrix"""
+                        #a= CAD
+                        #b= ARUCO
                         #SOURCE=CAD
                         #TARGET=Intel                                               
                         pre_reg = initialAlignment(cad_ref,id_tvec)
@@ -321,6 +358,37 @@ if __name__ == "__main__":
                         """Get Registered  PC"""
                         source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
                         
+                        #Generate Grid Path
+                        p2=id_tvec[0]
+                        p3=id_tvec[2]
+                        p1=id_tvec[3]
+                       
+                        w=2
+                        l=3
+                        
+                        path=[]
+                        for i in range(l+1):
+                            for j in range(w+1):
+                                #print("i",i,"j",j)
+                                path.append(p1+i/l*(p3-p1)+j/w*(p2-p1))
+                        
+                        # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
+                        #path_pc = o3d.geometry.PointCloud()
+                        path_pc.points = o3d.utility.Vector3dVector(path)
+                        #Color
+                        path_pc.paint_uniform_color([1.0, 0.0, 1.0])
+                        #calculate Normals
+                        #enter 'n' in keyboard to see normals
+                        path_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
+                        path_pc.transform(flip_transform)
+                        
+                        start_point = 4
+                        end_point = 7
+
+                        trajectory = gettrajectory(start_point, end_point, w, l, path)
+
+
+                        
                         #"""Visualize"""
                         #o3d.visualization.draw_geometries([source_icp, target])
                         
@@ -333,13 +401,17 @@ if __name__ == "__main__":
                         if frame_count == 0:
                             vis.add_geometry(pcd)
                             #vis.add_geometry(source_icp)
+                            vis.add_geometry(path_pc)
                         
                         #Update_geometry
                         vis.update_geometry(pcd)
                         #vis.update_geometry(source_icp)
+                        vis.update_geometry(path_pc)
+                        
                         #Render new frame
                         vis.poll_events()
                         vis.update_renderer()
+                        
                         
                         process_time = datetime.now() - dt0
                         print("FPS: " + str(1 / process_time.total_seconds()))
