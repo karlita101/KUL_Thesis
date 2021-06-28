@@ -18,10 +18,6 @@
 
 
 ###################################################################################
-
-
-
-
 import pyrealsense2 as rs
 import numpy as np
 from enum import IntEnum
@@ -32,7 +28,7 @@ import cv2
 import cv2.aruco as aruco
 import os
 import keyboard
-
+import copy
 
 from preregistration import *
 
@@ -53,20 +49,6 @@ def get_intrinsic_matrix(frame):
                                             intrinsics.fy, intrinsics.ppx,
                                             intrinsics.ppy)
     return out
-
-#(Not using preprocessing now)
-def preprocess_point_cloud(pointcloud, voxel_size):
-    print(":: Downsample with a voxel size %.6f." % voxel_size)
-    pointcloud_down = pointcloud.voxel_down_sample(voxel_size=0.05)
-    #pcd_down = o3d.geometry.voxel_down_sample(pcd, voxel_size)
-
-    radius_normal = voxel_size * 2
-    print(":: Estimate normal with search radius %.6f." % radius_normal)
-    #estimate_normals(pcd_down, o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30))
-    pointcloud_down.estimate_normals(
-        search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-    return pointcloud_down
-
 
 if __name__ == "__main__":
     
@@ -107,21 +89,13 @@ if __name__ == "__main__":
     
     """Load Ground Truth (CAD) PLY """
     ## in METERS
+    source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
     
-    source = o3d.io.read_point_cloud(
-        r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V10ACTUALmeters.PLY')
-    
-    
-    ##target_down = preprocess_point_cloud(target, voxel_size)
-    ##print(target)
-    
-    
-    """Estimate Normals"""
-    #No downsampling function
-    source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-    
-    
-    
+    """"Create Deep Copies"""
+    #Source Copy (Orange)
+    source_temp = copy.deepcopy(source)
+    source_temp.paint_uniform_color([1, 0.706, 0]) 
+
     """Initialize Camera Parameters and Settings"""
     #Camera Parameter Path
     path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -328,51 +302,41 @@ if __name__ == "__main__":
                         pcd.points = temp.points
                         pcd.colors = temp.colors
                         
-                        #target=temp
-
+                    
                         """ICP Registration"""
+                        #Use the preregistration to speed up ICP
+                        T = pre_reg
+                        T=np.matmul(flip_transform,T)
+
+
+                        threshold = 20/100  # [m] 	Maximum correspondence points-pair distance
+                        reg_p2p = o3d.pipelines.registration.registration_icp(
+                            source_temp, pcd, threshold, T,
+                            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+                            o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
+                        print("ICP evalutation",reg_p2p)
+                        print("Transformation is:")
+                        print(reg_p2p.transformation)
+
+                        """Get Registered  PC"""
+                        source_icp =copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
                         
-                        
-                        ### 210512: MAKE SURE TO CHANGE SOURCE/TARGET. SOURCE=CAD
-                        # ###source_down = preprocess_point_cloud(source, voxel_size=1e-5)
-                        # source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-                        
-                        # #####TRY ICP#####
+                        #"""Visualize"""
+                        #o3d.visualization.draw_geometries([source_icp, target])
                         
                         # #Threshold= the maximum distance in which the search tried to find a correspondence for each point
                         # #Fitness=measures the overlapping area (# of inlier correspondences / # of points in target). The higher the better.
-                        # threshold = 10
-
-                        # #Random intial transformation
-                        """Use the preregistration to speed up ICP"""
-                        # current_transformation=pre_reg
-                        # current_transformation = np.identity(4)
-                        
-                        # print("source",source.points)
-                        # print('temp',target.points)
-                        
-                        # # reg_p2p = o3d.pipelines.registration.registration_icp(
-                        # #     source, target, threshold, current_transformation,
-                        # #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
-                        
-                        
                         # #TransformationEstimation PointToPoint: provides function to compute the residuals and Jacobian matrices of the P2p ICP objective.
-                        # #registration_icp takes it as a parameterand runs p2p ICP to obtain results
-                        # reg_p2p = o3d.pipelines.registration.registration_icp(
-                        #     source, target, threshold, current_transformation,
-                        #     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-                        #     o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20))
-                        # print(reg_p2p)
-                        # print("Transformation is:")
-                        # print(reg_p2p.transformation)
-                        
+                      
                        
                         
                         if frame_count == 0:
                             vis.add_geometry(pcd)
+                            vis.add_geometry(source_icp)
                         
                         #Update_geometry
                         vis.update_geometry(pcd)
+                        vis.update_geometry(source_icp)
                         #Render new frame
                         vis.poll_events()
                         vis.update_renderer()
@@ -382,7 +346,7 @@ if __name__ == "__main__":
                         frame_count += 1
                         #frame_count=True
                         
-                        if keyboard.is_pressed('Enter'):
+                        """if keyboard.is_pressed('Enter'):
                             
                             #Write PCD
                             #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
@@ -391,21 +355,23 @@ if __name__ == "__main__":
                             
                             #210623PilotTestInvestigatePC
                             #./210517PilotTest/preregmat/'+"preregT"
+                            #./210623PilotTestInvestigatePC
+
                             o3d.io.write_point_cloud(
-                                "./210623PilotTestInvestigatePC/pointclouds/"+"BackPLY"+str(frame_count)+".ply", temp)
+                                "./210624PilotTestAngles60/Angle30/pointclouds/"+"BackPLY"+str(frame_count)+".ply", temp)
                             #save pre-reg as numpy array
                             np.save(
-                                './210623PilotTestInvestigatePC/preregmat/'+"preregT"+str(frame_count), pre_reg)
+                                './210624PilotTestAngles60/Angle30/preregmat/'+"preregT"+str(frame_count), pre_reg)
                             
                             #save aruco marker coordinates
                             np.save(
-                                './210623PilotTestInvestigatePC/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
+                                './210624PilotTestAngles60/Angle30/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
                             print("Captured")
                             
                             #save aruco marker distances
                             #np.save(
                             #    './210517PilotTest/distancesnpy/'+'normdist'+str(frame_count), norm_ARUCO)
-                            #print("Captured")
+                            #print("Captured")"""
                             
                             
                         if keyboard.is_pressed('q'):  # if key 'q' is pressed
