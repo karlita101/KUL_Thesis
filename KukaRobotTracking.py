@@ -12,7 +12,6 @@ import keyboard
 
 from preregistration import *
 
-
 class Preset(IntEnum):
     Custom = 0
     Default = 1
@@ -34,40 +33,7 @@ def get_intrinsic_matrix(frame):
 if __name__ == "__main__":
     
     dir = path = r'C: \Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
-    
-    """CAD Center Coordinates"""
-    #CAD aruco Markers vertices coordinate [x,y,z] in mm    
-    
-    upperL = [[-105.50, 124.64, - 120.13], [-84.50, 124.64, -120.13],
-            [-84.50, 124.63, -99.13], [-105.50, 124.63, -99.13]]
-    upperR = [[84.50, 124.64, -120.13], [105.50, 124.64, -120.13],
-            [105.50, 124.63, -99.13], [84.50, 124.63, -99.13]]
-    lowerL = [[-106.47, 119.50, -28.0], [-85.47, 119.50, -28.00],
-            [-85.47, 119.50, -7.00], [-106.47, 119.50, -7.00]]
-    lowerR = [[85.47, 119.50, -28.00], [106.47, 119.50, -28.00],
-            [106.47, 119.50, -7.00], [85.47, 119.50, -7.00]]
-
-    upperL = np.asarray(upperL)
-    cen_UL = np.mean(upperL, axis=0)
-
-    upperR = np.asarray(upperR)
-    cen_UR = np.mean(upperR, axis=0)
-
-    lowerL = np.asarray(lowerL)
-    cen_LL = np.mean(lowerL, axis=0)
-
-    lowerR = np.asarray(lowerR)
-    cen_LR = np.mean(lowerR, axis=0)
-
-    # (4,3) shape in [m] units
-    cad_ref = np.asarray([cen_UL, cen_UR, cen_LR, cen_LL])/1000
-
-    """Load Ground Truth (CAD) PLY """
-    ## in METERS
-    
-    source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
-
-    
+     
     """Initialize Camera Parameters and Settings"""
     #Camera Parameter Path
     path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -81,14 +47,10 @@ if __name__ == "__main__":
     #Calll aruco dictionary
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
     
-    #Aruco marker length
-    #markerlen = 2.0/100  # Square dimension [m]
+    #marker length
     markerlen = 3.19/100
-    #Initialize aruco IDs used for polygon shape: top left bottom left, top right and  bottom right
-    #arucoIDs=[2,35,100,200]
-    #21040 KR: add aruco ID's for Male Manikin test and back phantom!
-    arucoIDs = [4, 3, 300, 400]
-    
+    #Drawn axis length
+    axis_len = 0.02
 
     #Create empty lists to store marker translation and rotation vectors
     id_rvec=[]
@@ -101,10 +63,7 @@ if __name__ == "__main__":
     # Create a pipeline
     pipeline = rs.pipeline()
 
-    #Create a config and configure the pipeline to stream
-    #  different resolutions of color and depth streams
     config = rs.config()
-
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
     config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
@@ -130,18 +89,10 @@ if __name__ == "__main__":
     align_to = rs.stream.color
     align = rs.align(align_to)
 
-    #initialize visualizer Class
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
-
-    pcd = o3d.geometry.PointCloud()
-    flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
 
     # Streaming loop
     frame_count = 0
-
-    axis_len = 0.02
-    
+        
     #frame_count= False
     try:
         while True:
@@ -157,9 +108,7 @@ if __name__ == "__main__":
             # Get aligned frames
             aligned_depth_frame = aligned_frames.get_depth_frame()
             color_frame = aligned_frames.get_color_frame()
-            intrinsic = o3d.camera.PinholeCameraIntrinsic(
-                get_intrinsic_matrix(color_frame))
-
+            
             # Validate that both frames are valid
             if not aligned_depth_frame or not color_frame:
                 continue
@@ -201,7 +150,7 @@ if __name__ == "__main__":
                 frame_count += 1
                 #frame_count=True     
                                                   
-                #Record Back Markers
+                #Save Markers t, r vectors 
                 if keyboard.is_pressed('Enter'):                           
                     np.save('./210628KukaRegistration/'+'arucoTvec'+str(frame_count), track_tvec)
                     np.save('./210628KukaRegistration/'+'arucoRVec='+str(frame_count), track_rvec)
@@ -233,5 +182,5 @@ if __name__ == "__main__":
 
     finally:
         pipeline.stop()
-    #Close Open3D Window
-    vis.destroy_window()
+
+
