@@ -28,11 +28,14 @@ def initialAlignment(source, target):
     len_source  = source.shape[0]
     len_target = target.shape[0]
     
+    
 
     if len_source == len_target and len_source !=0 and len_target!=0:
 
-        tmpSource = numpyArr2vtkPoints(source)
-        tmpTarget = numpyArr2vtkPoints(target)
+        tmpSource = numpyArr2vtkPoints(source[:3])
+        tmpTarget = numpyArr2vtkPoints(target[:3])
+        print("----------"*10)
+        print(source[:3].shape)
        
         landmarkTransform = vtk.vtkLandmarkTransform()
         landmarkTransform.SetSourceLandmarks(tmpSource)
