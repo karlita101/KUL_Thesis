@@ -125,11 +125,20 @@ if __name__ == "__main__":
     ## in METERS
     source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
     
+    #assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_rev2_fine.PLY')
+    assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_rev3_downsampled1500.PLY')
+    
+    voxel_size = 1/100  # 1cm
+    down_assembly = assembly.voxel_down_sample(voxel_size)
+    down_assembly.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=2*voxel_size, max_nn=30))
+    
+        
     """"Create Deep Copies"""
     #Source Copy (Orange)
-    source_temp = copy.deepcopy(source)
-    source_temp.paint_uniform_color([1, 0.706, 0]) 
+    source_temp = copy.deepcopy(source).paint_uniform_color([0.44, 0.53, 0.6])
+    assembly_temp = copy.deepcopy(down_assembly).paint_uniform_color([0.44, 0.53, 0.6])
 
+    
     """Initialize Camera Parameters and Settings"""
     #Camera Parameter Path
     path = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\calibration.txt'
@@ -346,7 +355,7 @@ if __name__ == "__main__":
                         T=np.matmul(flip_transform,T)
 
 
-                        threshold = 20/100  # [m] 	Maximum correspondence points-pair distance
+                        threshold = 60/100  # [m] 	Maximum correspondence points-pair distance
                         reg_p2p = o3d.pipelines.registration.registration_icp(
                             source_temp, pcd, threshold, T,
                             o3d.pipelines.registration.TransformationEstimationPointToPoint(),
@@ -356,10 +365,20 @@ if __name__ == "__main__":
                         print(reg_p2p.transformation)
 
                         """Get Registered  PC"""
+                        
+                        ## Doesn't update in real time. Only the initial
+                        """assembly_temp = copy.deepcopy(assembly).paint_uniform_color([0.44, 0.53, 0.6])
+                        assembly_icp = assembly_temp.transform(reg_p2p.transformation)"""
+                        
+                        assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
+                        
+                        #source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
                         source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                        #assembly_icp = source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                        #assembly_icp = copy.deepcopy(assembly).transform(reg_p2p.transformation)
                         
                         #Generate Grid Path
-                        p2=id_tvec[0]
+                        """p2=id_tvec[0]
                         p3=id_tvec[2]
                         p1=id_tvec[3]
                        
@@ -385,28 +404,33 @@ if __name__ == "__main__":
                         start_point = 4
                         end_point = 7
 
-                        trajectory = gettrajectory(start_point, end_point, w, l, path)
+                        trajectory = gettrajectory(start_point, end_point, w, l, path)"""
 
 
                         
                         #"""Visualize"""
-                        #o3d.visualization.draw_geometries([source_icp, target])
+                        #o3d.visualization.draw_geometries([source_icp, pcd])
+                        #o3d.visualization.draw_geometries([assembly_icp, pcd])
                         
                         # #Threshold= the maximum distance in which the search tried to find a correspondence for each point
                         # #Fitness=measures the overlapping area (# of inlier correspondences / # of points in target). The higher the better.
                         # #TransformationEstimation PointToPoint: provides function to compute the residuals and Jacobian matrices of the P2p ICP objective.
                       
                        
-                        
                         if frame_count == 0:
                             vis.add_geometry(pcd)
-                            #vis.add_geometry(source_icp)
-                            vis.add_geometry(path_pc)
+                            #vis.add_geometry(assembly_temp)
+                            #vis.add_geometry(source_temp)
+                            vis.add_geometry(source_icp)
+                            #vis.add_geometry(path_pc)
+                        
                         
                         #Update_geometry
                         vis.update_geometry(pcd)
-                        #vis.update_geometry(source_icp)
-                        vis.update_geometry(path_pc)
+                        #vis.update_geometry(assembly_temp)
+                        #vis.update_geometry(source_temp)
+                        vis.update_geometry(source_icp)
+                        #vis.update_geometry(path_pc)
                         
                         #Render new frame
                         vis.poll_events()
