@@ -541,7 +541,7 @@ if __name__ == "__main__":
     l2,=ax2.plot(t,  x_vec[:, 2]*1000)
     l3,=ax2.plot(t,  x_vec[:, 3]*1000)
     
-    ax2.set(xlabel='samples', ylabel='X Position (mm)',title='Detect ArUco Marker X Postition')
+    ax2.set(xlabel='samples', ylabel='X Position (mm)',title='Detected ArUco Marker X Postition')
     ax2.legend((l0, l1, l2, l3), (str(arucoIDs[0]), str(arucoIDs[1]), str(arucoIDs[2]), str(arucoIDs[0])),
                loc='upper right', shadow=True)
     
@@ -551,4 +551,34 @@ if __name__ == "__main__":
 
     fig2.savefig("test2.png")
     plt.show()
-    #print(str(arucoIDs[0]))
+    
+    figx, axs = plt.subplots(2, 2)
+
+    # basic plot
+    axs[0, 0].boxplot(x_vec[:, 0]*1000)
+    axs[0, 0].set_title('basic plot')
+
+    axs[0, 1].boxplot(x_vec[:, 1]*1000)
+    axs[0, 1].set_title('basic plot')
+    
+    axs[1, 0].boxplot(x_vec[:, 3]*1000)
+    axs[1, 0].set_title('basic plot')
+    
+    axs[1, 1].boxplot(x_vec[:, 2]*1000)
+    axs[1, 1].set_title('basic plot')
+    
+    figx.savefig("testx.png")
+    
+    
+    #data_to_plot = np.random.rand(100, 5)
+    # positions = np.arange(4) + 1
+
+    # fig, ax = plt.subplots(1, 2, figsize=(9, 4))
+
+    # # matplotlib > 1.4
+    # bp = ax[0].boxplot(x_vec, positions=positions, showmeans=True)
+    # ax[0].set_title("Using showmeans")
+    # fig.savefig("test3.png")
+    
+    
+
