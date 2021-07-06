@@ -29,6 +29,7 @@ import cv2.aruco as aruco
 import os
 import keyboard
 import copy
+import time
 
 from preregistration import *
 
@@ -126,16 +127,17 @@ if __name__ == "__main__":
     source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
     
     #assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_rev2_fine.PLY')
-    assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_rev3_downsampled1500.PLY')
+    assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineBack_Assembly_KR_rev2.PLY')
     
-    voxel_size = 1/100  # 1cm
+      
+    voxel_size = 0.10/100  # 1cm
     down_assembly = assembly.voxel_down_sample(voxel_size)
     down_assembly.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=2*voxel_size, max_nn=30))
     
-        
+   
     """"Create Deep Copies"""
     #Source Copy (Orange)
-    source_temp = copy.deepcopy(source).paint_uniform_color([0.44, 0.53, 0.6])
+    source_temp = copy.deepcopy(source).paint_uniform_color([1, 0.706, 0])
     assembly_temp = copy.deepcopy(down_assembly).paint_uniform_color([0.44, 0.53, 0.6])
 
     
@@ -300,7 +302,7 @@ if __name__ == "__main__":
                         # print("norm RS from 1 to 2", normb_12)"""
                         
                         """Pre-registration transformation matrix"""
-                        #a= CAD
+                        #a= CAD ,
                         #b= ARUCO
                         #SOURCE=CAD
                         #TARGET=Intel                                               
@@ -355,7 +357,7 @@ if __name__ == "__main__":
                         T=np.matmul(flip_transform,T)
 
 
-                        threshold = 60/100  # [m] 	Maximum correspondence points-pair distance
+                        threshold = 80/100  # [m] 	Maximum correspondence points-pair distance
                         reg_p2p = o3d.pipelines.registration.registration_icp(
                             source_temp, pcd, threshold, T,
                             o3d.pipelines.registration.TransformationEstimationPointToPoint(),
@@ -366,16 +368,14 @@ if __name__ == "__main__":
 
                         """Get Registered  PC"""
                         
-                        ## Doesn't update in real time. Only the initial
-                        """assembly_temp = copy.deepcopy(assembly).paint_uniform_color([0.44, 0.53, 0.6])
-                        assembly_icp = assembly_temp.transform(reg_p2p.transformation)"""
+                        #assembly_temp.transform(reg_p2p.transformation)
                         
-                        assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
-                        
-                        #source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                        #Sking (Back) ONLY- WOKRS
                         source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
-                        #assembly_icp = source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
-                        #assembly_icp = copy.deepcopy(assembly).transform(reg_p2p.transformation)
+
+                        assembly_icp=assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
+                        
+                        
                         
                         #Generate Grid Path
                         """p2=id_tvec[0]
@@ -409,33 +409,24 @@ if __name__ == "__main__":
 
                         
                         #"""Visualize"""
-                        #o3d.visualization.draw_geometries([source_icp, pcd])
-                        #o3d.visualization.draw_geometries([assembly_icp, pcd])
-                        
-                        # #Threshold= the maximum distance in which the search tried to find a correspondence for each point
-                        # #Fitness=measures the overlapping area (# of inlier correspondences / # of points in target). The higher the better.
-                        # #TransformationEstimation PointToPoint: provides function to compute the residuals and Jacobian matrices of the P2p ICP objective.
-                      
                        
                         if frame_count == 0:
                             vis.add_geometry(pcd)
-                            #vis.add_geometry(assembly_temp)
-                            #vis.add_geometry(source_temp)
-                            vis.add_geometry(source_icp)
+                            vis.add_geometry(assembly_icp)
+                            ##vis.add_geometry(source_icp)
                             #vis.add_geometry(path_pc)
                         
                         
                         #Update_geometry
                         vis.update_geometry(pcd)
-                        #vis.update_geometry(assembly_temp)
+                        vis.update_geometry(assembly_icp)
                         #vis.update_geometry(source_temp)
-                        vis.update_geometry(source_icp)
+                        ##vis.update_geometry(source_icp)
                         #vis.update_geometry(path_pc)
                         
                         #Render new frame
                         vis.poll_events()
                         vis.update_renderer()
-                        
                         
                         process_time = datetime.now() - dt0
                         print("FPS: " + str(1 / process_time.total_seconds()))
