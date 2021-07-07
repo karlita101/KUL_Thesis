@@ -32,7 +32,7 @@ import copy
 import time
 
 from preregistration import *
-
+import matplotlib.pyplot as plt
 
 class Preset(IntEnum):
     Custom = 0
@@ -115,6 +115,29 @@ if __name__ == "__main__":
 
     # (4,3) shapate in [m] units
     cad_ref = np.asarray([cen_UL, cen_UR, cen_LR, cen_LL])/1000
+    
+    #Get dimension lengths and width (TRUE=CAD)
+    difa_01 = cad_ref[0]-cad_ref[1]
+    difa_12 = cad_ref[1]-cad_ref[2]
+
+    difa_32 = cad_ref[3]-cad_ref[2]
+    difa_03 = cad_ref[0]-cad_ref[3]
+
+    norma_01 = np.linalg.norm(difa_01)
+    norma_12 = np.linalg.norm(difa_12)
+
+    norma_32 = np.linalg.norm(difa_32)
+    norma_03 = np.linalg.norm(difa_03)
+
+    length_true = np.array([norma_01, norma_32])*1000
+    width_true = np.array([norma_12, norma_03])*1000
+
+    # print("------true length in mm------")
+    # print(length_true)
+    # print("------true width in mm------")
+    # print(width_true)
+    
+   
     
 
     # """Initialize Parameters for down_sampling PC"""
@@ -214,6 +237,16 @@ if __name__ == "__main__":
     # Streaming loop
     frame_count = 0
 
+    read=0
+    
+    #Plot in real time
+    fig = plt.figure()
+    axe = fig.add_subplot(111)
+    X, Y = [], []
+    sp, = axe.plot([], [], label='toto', ms=10, color='k', marker='o', ls='')
+    fig.show()
+    
+    
     
     #frame_count= False
     try:
@@ -259,6 +292,7 @@ if __name__ == "__main__":
                                 
                 #If 4 Markers were detected
                 if len(corners) == 4:
+                    
                         for i, id in enumerate(ids):
                             #print('ID index', i, 'Value',id)
                             if id == arucoIDs[0]:
@@ -314,8 +348,6 @@ if __name__ == "__main__":
                         
                         ##Get distances! (NORM)
                         normb_01=np.linalg.norm(difb_01)
-                        # print("norm CAD from 0 to 1",norma_01)
-                        # print("norm RS from 0 to 1", normb_01)
                         normb_12=np.linalg.norm(difb_12)
                         
                         normb_32 = np.linalg.norm(difb_32)
@@ -325,11 +357,38 @@ if __name__ == "__main__":
                         length_dim = np.array([normb_01, normb_32])*1000
                         width_dim = np.array([normb_03, normb_12])*1000
                         
-                        print("------Length Dimensions in mm--------")
-                        print(length_dim)
-                        print("------Widthth Dimensions in mm--------")
-                        print(width_dim)
                         
+                        # print("norm CAD from 0 to 1",norma_01)
+                        # print("norm RS from 0 to 1", normb_01)
+                        
+                        # print("------Length Dimensions in mm--------")
+                        # print(length_dim)
+                        # print("------Widthth Dimensions in mm--------")
+                        # print(width_dim)
+                        
+                        #Difference from TRUE (CAD)
+                        length_dif=length_dim-length_true
+                        width_dif=width_dim-width_true
+                        
+                        print("-----DIF LENGTH-----")
+                        print(length_dif)
+                        print("-----DIF WIDTH------")
+                        print(width_dif)
+                        
+                        print("-----percent error-----")
+                        print(length_dif/length_true*100)
+                        print(width_dif/width_true*100)
+                        
+                        X.append(read)
+                        Y.append(length_dif[0])
+                        sp.set_data(X, Y)
+                        axe.set_xlim(min(X), max(X))
+                        axe.set_ylim(min(Y), max(Y))
+                        #raw_input('...')
+                        fig.canvas.draw()
+
+                        
+                        read+=1
                         
                         #Assign to array
                         ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
@@ -397,9 +456,10 @@ if __name__ == "__main__":
                             source_temp, pcd, threshold, T,
                             o3d.pipelines.registration.TransformationEstimationPointToPoint(),
                             o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
-                        print("ICP evalutation",reg_p2p)
-                        print("Transformation is:")
-                        print(reg_p2p.transformation)
+                        #July 7: comment out
+                        # print("ICP evalutation",reg_p2p)
+                        # print("Transformation is:")
+                        # print(reg_p2p.transformation)
 
                         """Get Registered  PC"""
                         
@@ -529,7 +589,7 @@ if __name__ == "__main__":
     #Calculate key distance from CAD model ( ground truth)
     #0-1: Superior Left to Superior Right
     #1-2: Superior Right to Inferior Right
-    difa_01 = cad_ref[0]-cad_ref[1]
+    """difa_01 = cad_ref[0]-cad_ref[1]
     difa_12 = cad_ref[1]-cad_ref[2]
     
     difa_32 = cad_ref[3]-cad_ref[2]
@@ -547,7 +607,7 @@ if __name__ == "__main__":
     print("------true length in mm------")
     print(length_true)
     print("------true width in mm------")
-    print(width_true)
+    print(width_true)"""
     
     # print("norm cad 01",norma_01)
     # print("norm cad 12", norma_12)
