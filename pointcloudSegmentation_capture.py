@@ -190,6 +190,7 @@ if __name__ == "__main__":
 
     # Get depth sensor's depth scale
     depth_scale = depth_sensor.get_depth_scale()
+    print("Depth Scale is: ", depth_scale)
 
     # We will not display the background of objects more than clipping_distance_in_meters meters away
     clipping_distance_in_meters = 3  # 3 meter
@@ -264,6 +265,14 @@ if __name__ == "__main__":
                                 poly_corners[0] = corn_sq[i, 0, :]
                                 id_rvec[0], id_tvec[0], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
+                                # #Get center pixel coordinates
+                                # print("------SHAPE OF ALL CORNER--------")
+                                # center = corn_sq[i, :, :]
+                                # print(center)
+                                # print(center.shape)
+                                # print("--------Mean of pixel coordinates to get center")
+                                # print(np.mean(center, axis=0).astype(int))
+                                
                             elif id == arucoIDs[1]:
                                 poly_corners[1] = corn_sq[i, 1, :]
                                 id_rvec[1], id_tvec[1], markerPoints = aruco.estimatePoseSingleMarkers(
@@ -285,19 +294,45 @@ if __name__ == "__main__":
                         id_tvec=np.reshape(id_tvec,(4, 3))
                         
                         #Print id_tvecs
-                        #print('id_tvecs',id_tvec)
+                        #print('-------id_tvecs-------',id_tvec)
                         #print('id_tvecs shape',id_tvec.shape)
                         
-
-                        """difb_01=id_tvec[0]-id_tvec[1]
+                        #Jul 07: Use to check if the RS depth ant Z-tvec corresponse for the center pixel
+                        # print("----- Marker 1 RS depth value-------")
+                        # coord=np.mean(center, axis=0).astype(int)
+                        # print([coord[1],coord[0]])
+                        # d = depth_image[coord[1], coord[0]]
+                        # print('d',d)
+                        # print(d*depth_scale)
+                        # # print(depth_image[297, 241]*depth_scale)
+                        
+                        #Subtract vectors
+                        difb_01 = id_tvec[0]-id_tvec[1]
                         difb_12 = id_tvec[1]-id_tvec[2]
-                        ##Get distances!
+                        difb_32 = id_tvec[3]-id_tvec[2]
+                        difb_03 = id_tvec[0]-id_tvec[3]
+                        
+                        ##Get distances! (NORM)
                         normb_01=np.linalg.norm(difb_01)
                         # print("norm CAD from 0 to 1",norma_01)
                         # print("norm RS from 0 to 1", normb_01)
                         normb_12=np.linalg.norm(difb_12)
+                        
+                        normb_32 = np.linalg.norm(difb_32)
+                        normb_03 = np.linalg.norm(difb_03)
+                        
+                        #Arrange in length and width dim
+                        length_dim = np.array([normb_01, normb_32])*1000
+                        width_dim = np.array([normb_03, normb_12])*1000
+                        
+                        print("------Length Dimensions in mm--------")
+                        print(length_dim)
+                        print("------Widthth Dimensions in mm--------")
+                        print(width_dim)
+                        
+                        
                         #Assign to array
-                        norm_ARUCO=np.array([normb_01,normb_12])
+                        ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
                         # print("norm CAD from 1 to 2",norma_12)
                         # print("norm RS from 1 to 2", normb_12)"""
                         
@@ -421,7 +456,7 @@ if __name__ == "__main__":
                         vis.update_geometry(pcd)
                         vis.update_geometry(assembly_icp)
                         #vis.update_geometry(source_temp)
-                        ##vis.update_geometry(source_icp)
+                        #vis.update_geometry(source_icp)
                         #vis.update_geometry(path_pc)
                         
                         #Render new frame
@@ -496,8 +531,23 @@ if __name__ == "__main__":
     #1-2: Superior Right to Inferior Right
     difa_01 = cad_ref[0]-cad_ref[1]
     difa_12 = cad_ref[1]-cad_ref[2]
+    
+    difa_32 = cad_ref[3]-cad_ref[2]
+    difa_03 = cad_ref[0]-cad_ref[3]
+    
     norma_01 = np.linalg.norm(difa_01)
     norma_12 = np.linalg.norm(difa_12)
-
-    print("norm cad 01",norma_01)
-    print("norm cad 12", norma_12)
+    
+    norma_32 = np.linalg.norm(difa_32)
+    norma_03 = np.linalg.norm(difa_03)
+    
+    length_true=np.array([norma_01,norma_32])*1000
+    width_true = np.array([norma_12, norma_03])*1000
+    
+    print("------true length in mm------")
+    print(length_true)
+    print("------true width in mm------")
+    print(width_true)
+    
+    # print("norm cad 01",norma_01)
+    # print("norm cad 12", norma_12)
