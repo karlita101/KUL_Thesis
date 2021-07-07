@@ -242,6 +242,8 @@ if __name__ == "__main__":
     #Plot in real time
     fig = plt.figure()
     axe = fig.add_subplot(111)
+    axe.set_ylabel('Difference in mm')
+    axe.set_title('Measured difference in AruCo and CAD dimension')
     X, Y = [], []
     sp, = axe.plot([], [], label='toto', ms=10, color='k', marker='o', ls='')
     fig.show()
@@ -389,144 +391,152 @@ if __name__ == "__main__":
 
                         
                         read+=1
+                        ##These have some shadow
+                        #Jul7 1:50PM this works for approx 70cm away from camera...still some outliers
+                        #length_dif[1] < 11 and length_dif[1]>9.5
+                        #2:05PM same position, doesn't work
                         
-                        #Assign to array
-                        ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
-                        # print("norm CAD from 1 to 2",norma_12)
-                        # print("norm RS from 1 to 2", normb_12)"""
-                        
-                        """Pre-registration transformation matrix"""
-                        #a= CAD ,
-                        #b= ARUCO
-                        #SOURCE=CAD
-                        #TARGET=Intel                                               
-                        pre_reg = initialAlignment(cad_ref,id_tvec)
-                        #print(pre_reg)
-                        
-                        """Draw Polygon Border"""
-                        cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
-                        
-                        """Create a binary mask ( 1 channel)"""
-                        binary_mask=np.zeros((gray_image.shape),np.uint8)
-                        cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
+                        #2:40 PM momentarily  at ~50cm
+                        #length_dif[1]/length_true[1]*100 < 4 and length_dif[0]/length_true[0]*100 < 3.75 
+                        if length_dif[0]>0:
+                            #Assign to array
+                            ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
+                            # print("norm CAD from 1 to 2",norma_12)
+                            # print("norm RS from 1 to 2", normb_12)"""
+                            
+                            """Pre-registration transformation matrix"""
+                            #a= CAD ,
+                            #b= ARUCO
+                            #SOURCE=CAD
+                            #TARGET=Intel                                               
+                            pre_reg = initialAlignment(cad_ref,id_tvec)
+                            #print(pre_reg)
+                            
+                            """Draw Polygon Border"""
+                            cv2.polylines(color_image, np.array([pts]), True, (0,0,255), 5)
+                            
+                            """Create a binary mask ( 1 channel)"""
+                            binary_mask=np.zeros((gray_image.shape),np.uint8)
+                            cv2.fillPoly(binary_mask, [pts], (255, 255, 255),8)
 
-                        """Segment Depth and  RGB frame with binary mask """
-                        depth_seg = cv2.bitwise_and(depth_image, depth_image, mask=binary_mask)
-                        color_seg=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
-                        #cv2.imshow("depth seg",depth_seg)
-                        #cv2.waitKey(25)
-                        cv2.imshow("color seg",color_seg)
-                        #color_selection[binary_mask==0]=255
+                            """Segment Depth and  RGB frame with binary mask """
+                            depth_seg = cv2.bitwise_and(depth_image, depth_image, mask=binary_mask)
+                            color_seg=cv2.bitwise_and(color_image, color_image, mask=binary_mask)
+                            #cv2.imshow("depth seg",depth_seg)
+                            #cv2.waitKey(25)
+                            cv2.imshow("color seg",color_seg)
+                            #color_selection[binary_mask==0]=255
+                            
+                            #Convert Color to RGB
+                            color_seg = cv2.cvtColor(color_seg, cv2.COLOR_BGR2RGB)
+                            
+                            """Proceed with PC Visualization"""
+                            depth_od3 = o3d.geometry.Image(depth_seg)
+                            color_temp_od3 = o3d.geometry.Image(color_seg)
+                            
+                            """Create RGBD"""
+                            #Open3D assumed that color and depth image are synchronized and registered in the same coordinate frame
+                            #Set to false to preserve 8-bit color channels
+                            rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                                color_temp_od3,
+                                depth_od3,
+                                depth_scale=1.0 / depth_scale,
+                                depth_trunc=clipping_distance_in_meters,
+                                convert_rgb_to_intensity=False)
+                            
+                            temp = o3d.geometry.PointCloud.create_from_rgbd_image(
+                                rgbd_image, intrinsic)
+                            temp.transform(flip_transform)
+                            
+                            #print("Number of points", (np.asarray(temp.points).shape))
+                            #Assign values
+                            pcd.points = temp.points
+                            pcd.colors = temp.colors
+                            
                         
-                        #Convert Color to RGB
-                        color_seg = cv2.cvtColor(color_seg, cv2.COLOR_BGR2RGB)
-                        
-                        """Proceed with PC Visualization"""
-                        depth_od3 = o3d.geometry.Image(depth_seg)
-                        color_temp_od3 = o3d.geometry.Image(color_seg)
-                        
-                        """Create RGBD"""
-                        #Open3D assumed that color and depth image are synchronized and registered in the same coordinate frame
-                        #Set to false to preserve 8-bit color channels
-                        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-                            color_temp_od3,
-                            depth_od3,
-                            depth_scale=1.0 / depth_scale,
-                            depth_trunc=clipping_distance_in_meters,
-                            convert_rgb_to_intensity=False)
-                        
-                        temp = o3d.geometry.PointCloud.create_from_rgbd_image(
-                            rgbd_image, intrinsic)
-                        temp.transform(flip_transform)
-                        
-                        #print("Number of points", (np.asarray(temp.points).shape))
-                        #Assign values
-                        pcd.points = temp.points
-                        pcd.colors = temp.colors
-                        
-                    
-                        """ICP Registration"""
-                        #Use the preregistration to speed up ICP
-                        T = pre_reg
-                        T=np.matmul(flip_transform,T)
-
-
-                        threshold = 80/100  # [m] 	Maximum correspondence points-pair distance
-                        reg_p2p = o3d.pipelines.registration.registration_icp(
-                            source_temp, pcd, threshold, T,
-                            o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-                            o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
-                        #July 7: comment out
-                        # print("ICP evalutation",reg_p2p)
-                        # print("Transformation is:")
-                        # print(reg_p2p.transformation)
-
-                        """Get Registered  PC"""
-                        
-                        #assembly_temp.transform(reg_p2p.transformation)
-                        
-                        #Sking (Back) ONLY- WOKRS
-                        source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
-
-                        assembly_icp=assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
-                        
-                        
-                        
-                        #Generate Grid Path
-                        """p2=id_tvec[0]
-                        p3=id_tvec[2]
-                        p1=id_tvec[3]
-                       
-                        w=2
-                        l=3
-                        
-                        path=[]
-                        for i in range(l+1):
-                            for j in range(w+1):
-                                #print("i",i,"j",j)
-                                path.append(p1+i/l*(p3-p1)+j/w*(p2-p1))
-                        
-                        # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
-                        #path_pc = o3d.geometry.PointCloud()
-                        path_pc.points = o3d.utility.Vector3dVector(path)
-                        #Color
-                        path_pc.paint_uniform_color([1.0, 0.0, 1.0])
-                        #calculate Normals
-                        #enter 'n' in keyboard to see normals
-                        path_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
-                        path_pc.transform(flip_transform)
-                        
-                        start_point = 4
-                        end_point = 7
-
-                        trajectory = gettrajectory(start_point, end_point, w, l, path)"""
+                            """ICP Registration"""
+                            #Use the preregistration to speed up ICP
+                            T = pre_reg
+                            T=np.matmul(flip_transform,T)
 
 
+                            threshold = 80/100  # [m] 	Maximum correspondence points-pair distance
+                            reg_p2p = o3d.pipelines.registration.registration_icp(
+                                source_temp, pcd, threshold, T,
+                                o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+                                o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
+                            #July 7: comment out
+                            # print("ICP evalutation",reg_p2p)
+                            # print("Transformation is:")
+                            # print(reg_p2p.transformation)
+
+                            """Get Registered  PC"""
+                            
+                            #assembly_temp.transform(reg_p2p.transformation)
+                            
+                            #Sking (Back) ONLY- WOKRS
+                            source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                            print(np.asarray(source_temp.points)[0])
+                            print(np.asarray(source.points)[0])
+                            assembly_icp=assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
+                            
+                            
+                            
+                            #Generate Grid Path
+                            """p2=id_tvec[0]
+                            p3=id_tvec[2]
+                            p1=id_tvec[3]
                         
-                        #"""Visualize"""
-                       
-                        if frame_count == 0:
-                            vis.add_geometry(pcd)
-                            vis.add_geometry(assembly_icp)
-                            ##vis.add_geometry(source_icp)
-                            #vis.add_geometry(path_pc)
+                            w=2
+                            l=3
+                            
+                            path=[]
+                            for i in range(l+1):
+                                for j in range(w+1):
+                                    #print("i",i,"j",j)
+                                    path.append(p1+i/l*(p3-p1)+j/w*(p2-p1))
+                            
+                            # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
+                            #path_pc = o3d.geometry.PointCloud()
+                            path_pc.points = o3d.utility.Vector3dVector(path)
+                            #Color
+                            path_pc.paint_uniform_color([1.0, 0.0, 1.0])
+                            #calculate Normals
+                            #enter 'n' in keyboard to see normals
+                            path_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
+                            path_pc.transform(flip_transform)
+                            
+                            start_point = 4
+                            end_point = 7
+
+                            trajectory = gettrajectory(start_point, end_point, w, l, path)"""
+
+
+                            
+                            #"""Visualize"""
                         
-                        
-                        #Update_geometry
-                        vis.update_geometry(pcd)
-                        vis.update_geometry(assembly_icp)
-                        #vis.update_geometry(source_temp)
-                        #vis.update_geometry(source_icp)
-                        #vis.update_geometry(path_pc)
-                        
-                        #Render new frame
-                        vis.poll_events()
-                        vis.update_renderer()
-                        
-                        process_time = datetime.now() - dt0
-                        print("FPS: " + str(1 / process_time.total_seconds()))
-                        frame_count += 1
-                        #frame_count=True
+                            if frame_count == 0:
+                                vis.add_geometry(pcd)
+                                #vis.add_geometry(assembly_icp)
+                                vis.add_geometry(source_icp)
+                                #vis.add_geometry(path_pc)
+                            
+                            
+                            #Update_geometry
+                            vis.update_geometry(pcd)
+                            #vis.update_geometry(assembly_icp)
+                            #vis.update_geometry(source_temp)
+                            vis.update_geometry(source_icp)
+                            #vis.update_geometry(path_pc)
+                            
+                            #Render new frame
+                            vis.poll_events()
+                            vis.update_renderer()
+                            
+                            process_time = datetime.now() - dt0
+                            print("FPS: " + str(1 / process_time.total_seconds()))
+                            frame_count += 1
+                            #frame_count=True
                         
                         """if keyboard.is_pressed('Enter'):
                             
@@ -562,6 +572,7 @@ if __name__ == "__main__":
                 else:
                     pts = None
                     print("Non-intialized Aruco detected")
+                    
             else:
                 pts=None
                 print("No Aruco markers detected")
