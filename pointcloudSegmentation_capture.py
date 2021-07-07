@@ -250,6 +250,8 @@ if __name__ == "__main__":
     
     
     
+    source_pcd=o3d.geometry.PointCloud()
+    
     #frame_count= False
     try:
         while True:
@@ -458,29 +460,37 @@ if __name__ == "__main__":
                             #Use the preregistration to speed up ICP
                             T = pre_reg
                             T=np.matmul(flip_transform,T)
-
+                            
+                            
+                            ##July7: always do icp with the deepcopy of source
+                            
 
                             threshold = 80/100  # [m] 	Maximum correspondence points-pair distance
                             reg_p2p = o3d.pipelines.registration.registration_icp(
-                                source_temp, pcd, threshold, T,
+                                copy.deepcopy(source), pcd, threshold, T,
                                 o3d.pipelines.registration.TransformationEstimationPointToPoint(),
                                 o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
+                            
+                            
                             #July 7: comment out
-                            # print("ICP evalutation",reg_p2p)
-                            # print("Transformation is:")
-                            # print(reg_p2p.transformation)
+                            print("ICP evalutation",reg_p2p)
+                            print("Transformation is:")
+                            print(reg_p2p.transformation)
 
                             """Get Registered  PC"""
                             
                             #assembly_temp.transform(reg_p2p.transformation)
                             
                             #Sking (Back) ONLY- WOKRS
-                            source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+                            """source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
                             print(np.asarray(source_temp.points)[0])
                             print(np.asarray(source.points)[0])
                             assembly_icp=assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
+                            """
                             
-                            
+                            source_icp=copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])                            
+                            source_pcd.points=source_icp.points
+                            source_pcd.colors=source_icp.colors
                             
                             #Generate Grid Path
                             """p2=id_tvec[0]
@@ -518,16 +528,18 @@ if __name__ == "__main__":
                             if frame_count == 0:
                                 vis.add_geometry(pcd)
                                 #vis.add_geometry(assembly_icp)
-                                vis.add_geometry(source_icp)
+                                ##vis.add_geometry(source_icp)
                                 #vis.add_geometry(path_pc)
+                                vis.add_geometry(source_pcd)
                             
                             
                             #Update_geometry
                             vis.update_geometry(pcd)
                             #vis.update_geometry(assembly_icp)
                             #vis.update_geometry(source_temp)
-                            vis.update_geometry(source_icp)
+                            ##vis.update_geometry(source_icp)
                             #vis.update_geometry(path_pc)
+                            vis.update_geometry(source_pcd)
                             
                             #Render new frame
                             vis.poll_events()
