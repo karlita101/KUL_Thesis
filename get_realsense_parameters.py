@@ -47,7 +47,8 @@ try:
         color_intrin = color_frame.profile.as_video_stream_profile().intrinsics
         depth_to_color_extrin = depth_frame.profile.get_extrinsics_to(color_frame.profile) # get_extrinsics_to(...)	Get the extrinsic transformation between two profiles (representing physical sensors)
         depth_sensor = pipe_profile.get_device().first_depth_sensor()
-        #depth_scale = depth_sensor.get_depth_scale()
+        depth_scale = depth_sensor.get_depth_scale()
+        print("Depth Scale is: ", depth_scale)
         #depth_pixel = [200, 200]
         #depth_point = rs.rs2_deproject_pixel_to_point(depth_intrin, depth_pixel, depth_scale)
         #color_point = rs.rs2_transform_point_to_point(depth_to_color_extrin, depth_point)
