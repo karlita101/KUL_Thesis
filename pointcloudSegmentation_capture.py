@@ -30,7 +30,7 @@ import os
 import keyboard
 import copy
 import time
-
+import math
 from preregistration import *
 import matplotlib.pyplot as plt
 
@@ -85,6 +85,40 @@ def gettrajectory(start_point, end_point, w, l, path):
         #next scan line
         scan += 1
         
+def getmattransform(Rmat,tvec):
+    #rodrigues to rot matrix
+    T_mat=np.zeros((4,4))
+    T_mat[:3,:3]=Rmat
+    #tvec = np.squeeze(tool_tvec).reshape(3, 1)
+    T_mat[:3,3]=tvec
+    T_mat[3,3]=1
+    return T_mat
+
+# Calculates Rotation Matrix given euler angles.
+
+
+def eulerAnglesToRotationMatrix(theta):
+    #XYZ
+    R_x = np.array([[1,         0,                  0],
+                    [0,         math.cos(theta[0]), -math.sin(theta[0])],
+                    [0,         math.sin(theta[0]), math.cos(theta[0])]
+                    ])
+
+    R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])],
+                    [0,                     1,      0],
+                    [-math.sin(theta[1]),   0,      math.cos(theta[1])]
+                    ])
+
+    R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
+                    [math.sin(theta[2]),    math.cos(theta[2]),     0],
+                    [0,                     0,                      1]
+                    ])
+
+    Rxyz = np.dot(R_x, np.dot(R_y,R_z))
+    return Rxyz
+
+    
+    
 if __name__ == "__main__":
     
     dir = path = r'C: \Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
@@ -144,6 +178,7 @@ if __name__ == "__main__":
     # voxel_size=1e-15
     # radius_normal = voxel_size * 2
     
+    flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
     
     """Load Ground Truth (CAD) PLY """
     ## in METERS
@@ -151,18 +186,23 @@ if __name__ == "__main__":
     
     #assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_rev2_fine.PLY')
     assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineBack_Assembly_KR_rev2.PLY')
-    
-      
+          
     voxel_size = 0.10/100  # 1cm
     down_assembly = assembly.voxel_down_sample(voxel_size)
     down_assembly.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=2*voxel_size, max_nn=30))
+
+    #tool
+    #tool = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\0708MockInstrument_rev1_PLY.PLY')
+    tool_mesh = o3d.io.read_triangle_mesh(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\0708MockInstrument_rev1_PLY.PLY')
+    #tool_mesh.transform(flip_transform)
+    toolID= 84
     
-   
+    
     """"Create Deep Copies"""
     #Source Copy (Orange)
     source_temp = copy.deepcopy(source).paint_uniform_color([1, 0.706, 0])
     assembly_temp = copy.deepcopy(down_assembly).paint_uniform_color([0.44, 0.53, 0.6])
-
+    
     
     """Initialize Camera Parameters and Settings"""
     #Camera Parameter Path
@@ -229,7 +269,7 @@ if __name__ == "__main__":
     vis.create_window()
 
     pcd = o3d.geometry.PointCloud()
-    flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
+    
 
     #June 28: path
     path_pc = o3d.geometry.PointCloud()
@@ -237,7 +277,9 @@ if __name__ == "__main__":
     # Streaming loop
     frame_count = 0
 
+    #>= 4 Aruco markers read count
     read=0
+    
     
     #Plot in real time
     fig = plt.figure()
@@ -249,7 +291,7 @@ if __name__ == "__main__":
     fig.show()
     
     
-    
+    """initalize point cloud objects""" 
     source_pcd=o3d.geometry.PointCloud()
     assemb_pcd=o3d.geometry.PointCloud()
     
@@ -294,9 +336,12 @@ if __name__ == "__main__":
             
             #Markers were detected
             if ids is not None:
-                                
+                
+                #Tool Flag: False= no tool exists
+                tool_flag = False
+                
                 #If 4 Markers were detected
-                if len(corners) == 4:
+                if len(corners) >= 4:
                     
                         for i, id in enumerate(ids):
                             #print('ID index', i, 'Value',id)
@@ -324,84 +369,122 @@ if __name__ == "__main__":
                                 poly_corners[3] = corn_sq[i, 3, :]
                                 id_rvec[3], id_tvec[3], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
+                            elif id == toolID:
+                                
+                                #Flag that the tool exist!
+                                tool_flag=True
+                                
+                                #Estimate Tool Pose from Aruco 
+                                tool_rvec, tool_tvec, markerPoints = aruco.estimatePoseSingleMarkers(
+                                    corners[i], markerlen, camera_matrix, dist_coef)
+                                
+                                # print("----TOOL INFO-----")
+                                # print(tool_rvec)
+                                # print(tool_tvec)
+                                # print(np.squeeze(tool_tvec).shape)
+                                
+                                """Get PC ---> Aruco Rot Matrix"""
+                                #Tranformation Matrix from PointCloud to Aruco Coordinate Frame
+                                angles = [0, np.pi, np.pi]
+                                Rxyz=eulerAnglesToRotationMatrix(angles)
+                                
+                                """Get Aruco --->PC Transform Matrix"""
+                                #Tranpose of Rxyz
+                                Rxyz_trans=np.transpose(Rxyz)
+                                Txyz = getmattransform(Rxyz_trans, np.zeros(3))
+                            
+                                
+                                """Get Aruco Transformation Matrix"""
+                                tool_Rmat, __ = cv2.Rodrigues(tool_rvec)
+                                tool_transform=getmattransform(tool_Rmat,tool_tvec)
+                                print(tool_transform)
+                                
+                                """Transform ARUCO Tmax to PC Coordinate Frame """
+                                #PC_cad= Taruco2PC * Taruco
+                                #PC_cad= Txyz*Taruco
+                                tool_aruco2PC = np.matmul(Txyz, tool_transform)
+                                
+                                """Apply to CAD Model"""
+                                
+ 
+                                tool=copy.deepcopy(tool_mesh).transform(tool_aruco2PC)
                             else:
                                 print('Another ID was detected', id)
-                        #Draw the polyline border
-                        pts = np.array([poly_corners],np.int32)
                         
-                        id_tvec=np.asarray(id_tvec)
-                        id_tvec=np.reshape(id_tvec,(4, 3))
-                        
-                        #Print id_tvecs
-                        #print('-------id_tvecs-------',id_tvec)
-                        #print('id_tvecs shape',id_tvec.shape)
-                        
-                        #Jul 07: Use to check if the RS depth ant Z-tvec corresponse for the center pixel
-                        # print("----- Marker 1 RS depth value-------")
-                        # coord=np.mean(center, axis=0).astype(int)
-                        # print([coord[1],coord[0]])
-                        # d = depth_image[coord[1], coord[0]]
-                        # print('d',d)
-                        # print(d*depth_scale)
-                        # # print(depth_image[297, 241]*depth_scale)
-                        
-                        #Subtract vectors
-                        difb_01 = id_tvec[0]-id_tvec[1]
-                        difb_12 = id_tvec[1]-id_tvec[2]
-                        difb_32 = id_tvec[3]-id_tvec[2]
-                        difb_03 = id_tvec[0]-id_tvec[3]
-                        
-                        ##Get distances! (NORM)
-                        normb_01=np.linalg.norm(difb_01)
-                        normb_12=np.linalg.norm(difb_12)
-                        
-                        normb_32 = np.linalg.norm(difb_32)
-                        normb_03 = np.linalg.norm(difb_03)
-                        
-                        #Arrange in length and width dim
-                        length_dim = np.array([normb_01, normb_32])*1000
-                        width_dim = np.array([normb_03, normb_12])*1000
-                        
-                        
-                        # print("norm CAD from 0 to 1",norma_01)
-                        # print("norm RS from 0 to 1", normb_01)
-                        
-                        # print("------Length Dimensions in mm--------")
-                        # print(length_dim)
-                        # print("------Widthth Dimensions in mm--------")
-                        # print(width_dim)
-                        
-                        #Difference from TRUE (CAD)
-                        length_dif=length_dim-length_true
-                        width_dif=width_dim-width_true
-                        
-                        print("-----DIF LENGTH-----")
-                        print(length_dif)
-                        print("-----DIF WIDTH------")
-                        print(width_dif)
-                        
-                        print("-----percent error-----")
-                        print(length_dif/length_true*100)
-                        print(width_dif/width_true*100)
-                        
-                        X.append(read)
-                        Y.append(length_dif[0])
-                        sp.set_data(X, Y)
-                        axe.set_xlim(min(X), max(X))
-                        axe.set_ylim(min(Y), max(Y))
-                        #raw_input('...')
-                        fig.canvas.draw()
+                        #Check if all 4 ARUCO markers to segment back were detected!
+                        if poly_corners is not None:
+                            
+                            #Draw the polyline border
+                            pts = np.array([poly_corners],np.int32)
+                            
+                            id_tvec=np.asarray(id_tvec)
+                            id_tvec=np.reshape(id_tvec,(4, 3))
+                            
+                            #Print id_tvecs
+                            #print('-------id_tvecs-------',id_tvec)
+                            #print('id_tvecs shape',id_tvec.shape)
+                            
+                            #Jul 07: Use to check if the RS depth ant Z-tvec corresponse for the center pixel
+                            # print("----- Marker 1 RS depth value-------")
+                            # coord=np.mean(center, axis=0).astype(int)
+                            # print([coord[1],coord[0]])
+                            # d = depth_image[coord[1], coord[0]]
+                            # print('d',d)
+                            # print(d*depth_scale)
+                            # # print(depth_image[297, 241]*depth_scale)
+                            
+                            #Subtract vectors
+                            difb_01 = id_tvec[0]-id_tvec[1]
+                            difb_12 = id_tvec[1]-id_tvec[2]
+                            difb_32 = id_tvec[3]-id_tvec[2]
+                            difb_03 = id_tvec[0]-id_tvec[3]
+                            
+                            ##Get distances! (NORM)
+                            normb_01=np.linalg.norm(difb_01)
+                            normb_12=np.linalg.norm(difb_12)
+                            
+                            normb_32 = np.linalg.norm(difb_32)
+                            normb_03 = np.linalg.norm(difb_03)
+                            
+                            #Arrange in length and width dim
+                            length_dim = np.array([normb_01, normb_32])*1000
+                            width_dim = np.array([normb_03, normb_12])*1000
+                            
+                            
+                            # print("norm CAD from 0 to 1",norma_01)
+                            # print("norm RS from 0 to 1", normb_01)
+                            
+                            # print("------Length Dimensions in mm--------")
+                            # print(length_dim)
+                            # print("------Widthth Dimensions in mm--------")
+                            # print(width_dim)
+                            
+                            #Difference from TRUE (CAD)
+                            length_dif=length_dim-length_true
+                            width_dif=width_dim-width_true
+                            
+                            print("-----DIF LENGTH-----")
+                            print(length_dif)
+                            print("-----DIF WIDTH------")
+                            print(width_dif)
+                            
+                            print("-----percent error-----")
+                            print(length_dif/length_true*100)
+                            print(width_dif/width_true*100)
+                            
+                            X.append(read)
+                            Y.append(length_dif[0])
+                            sp.set_data(X, Y)
+                            axe.set_xlim(min(X), max(X))
+                            axe.set_ylim(min(Y), max(Y))
+                            #raw_input('...')
+                            fig.canvas.draw()
 
+                            
+                            read+=1
+
+                            
                         
-                        read+=1
-                        ##These have some shadow
-                        #Jul7 1:50PM this works for approx 70cm away from camera...still some outliers
-                        #length_dif[1] < 11 and length_dif[1]>9.5
-                        #2:05PM same position, doesn't work
-                        
-                        #2:40 PM momentarily  at ~50cm
-                        #length_dif[1]/length_true[1]*100 < 4 and length_dif[0]/length_true[0]*100 < 3.75 
-                        if length_dif[0]>=0:
                             #Assign to array
                             ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
                             # print("norm CAD from 1 to 2",norma_12)
@@ -451,6 +534,7 @@ if __name__ == "__main__":
                                 rgbd_image, intrinsic)
                             temp.transform(flip_transform)
                             
+                            
                             #print("Number of points", (np.asarray(temp.points).shape))
                             #Assign values
                             pcd.points = temp.points
@@ -488,6 +572,9 @@ if __name__ == "__main__":
                             assemb_icp=copy.deepcopy(assembly_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])                            
                             assemb_pcd.points=assemb_icp.points
                             assemb_pcd.colors = assemb_icp.colors
+                            
+                            
+                            #tool=copy.deepcopy(tool_mesh).transform(flip_transform)
                             
                             
                             #Generate Grid Path
@@ -531,6 +618,12 @@ if __name__ == "__main__":
                             #Update_geometry
                             vis.update_geometry(pcd)
                             vis.update_geometry(assemb_pcd)
+                                                        
+                            if tool_flag == True:
+                                vis.add_geometry(tool)
+                                vis.update_geometry(tool)                            
+                                
+                                
                             #vis.update_geometry(source_pcd)
                             #vis.update_geometry(path_pc)
                             
@@ -538,12 +631,15 @@ if __name__ == "__main__":
                             vis.poll_events()
                             vis.update_renderer()
                             
+                            if tool_flag==True:
+                                vis.remove_geometry(tool)
+                                
                             process_time = datetime.now() - dt0
                             print("FPS: " + str(1 / process_time.total_seconds()))
                             frame_count += 1
                             #frame_count=True
                         
-                        """if keyboard.is_pressed('Enter'):
+                            """if keyboard.is_pressed('Enter'):
                             
                             #Write PCD
                             #o3d.io.write_point_cloud("CaptureFrame_PCD"+str(frame_count)+".pcd",temp)
@@ -571,9 +667,9 @@ if __name__ == "__main__":
                             #print("Captured")"""
                             
                             
-                        if keyboard.is_pressed('q'):  # if key 'q' is pressed
-                            print('You Pressed quit!')
-                            break  # finishing the loop
+                            if keyboard.is_pressed('q'):  # if key 'q' is pressed
+                                print('You Pressed quit!')
+                                break  # finishing the loop
                 else:
                     pts = None
                     print("Non-intialized Aruco detected")
