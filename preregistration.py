@@ -28,14 +28,18 @@ def initialAlignment(source, target):
     len_source  = source.shape[0]
     len_target = target.shape[0]
     
-    
+    #July 7/21 delete unstable aruco marker (MANUALLY DONE)
+    marker=0
+    stab_source=np.delete(np.copy(source),marker, axis=0)
+    stab_target = np.delete(np.copy(target), marker, axis=0)
 
     if len_source == len_target and len_source !=0 and len_target!=0:
-
-        tmpSource = numpyArr2vtkPoints(source[:3])
-        tmpTarget = numpyArr2vtkPoints(target[:3])
-        print("----------"*10)
-        print(source[:3].shape)
+        #source[:3]
+        tmpSource = numpyArr2vtkPoints(stab_source)
+        tmpTarget = numpyArr2vtkPoints(stab_target)
+        #check that it is a 3x3
+        #print("----------"*10)
+        #print(source[:3].shape)
        
         landmarkTransform = vtk.vtkLandmarkTransform()
         landmarkTransform.SetSourceLandmarks(tmpSource)
