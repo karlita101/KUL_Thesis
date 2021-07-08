@@ -94,7 +94,7 @@ if __name__ == "__main__":
     cen_LL = np.mean(lowerL, axis=0)
 
     lowerR = np.asarray(lowerR)
-    cen_LR = np.mean(lowerR, axis=0)
+    cen_LR = np.mean(lowerR, axis=0)q
 
     # (4,3) shapate in [m] units
     cad_ref = np.asarray([cen_UL, cen_UR, cen_LR, cen_LL])/1000
@@ -156,6 +156,9 @@ if __name__ == "__main__":
     
     #x_vec = np.array([], dtype=np.int64).reshape(0, 4)
     x_vec=np.zeros((n_read,4))
+    y_vec=np.zeros((n_read,4))
+    z_vec=np.zeros((n_read,4))
+    
     count_read=[]
     
     # Create a pipeline
@@ -281,15 +284,20 @@ if __name__ == "__main__":
                         
                         if read <n_read:
                             id_tvec_trans=np.transpose(id_tvec)
-                            print("id_tvec",id_tvec)
-                            print("------transpose ---")
-                            print(id_tvec_trans)
-                            print("first row")
-                            print(id_tvec_trans[0, :])
+                            
+                            # print("id_tvec",id_tvec)
+                            # print("------transpose ---")
+                            # print(id_tvec_trans)
+                            # print("first row")
+                            # print(id_tvec_trans[0, :])
                         
                             xrow = np.reshape(id_tvec_trans[0, :], (1, 4))
+                            yrow = np.reshape(id_tvec_trans[1, :], (1, 4))
+                            zrow = np.reshape(id_tvec_trans[2, :], (1, 4))
                             
                             x_vec[read,:]=xrow
+                            y_vec[read,:]=yrow
+                            z_vec[read, :]=zrow
                             #np.vstack((x_vec,xrow))
                             #np.append(x_vec,id_tvec_trans[0,:],axis=0)
                             #delta_t=time.time()-start_dt
@@ -341,111 +349,6 @@ if __name__ == "__main__":
                         #Convert Color to RGB
                         color_seg = cv2.cvtColor(color_seg, cv2.COLOR_BGR2RGB)
                         
-                        # """Proceed with PC Visualization"""
-                        # depth_od3 = o3d.geometry.Image(depth_seg)
-                        # color_temp_od3 = o3d.geometry.Image(color_seg)
-                        
-                        # """Create RGBD"""
-                        # #Open3D assumed that color and depth image are synchronized and registered in the same coordinate frame
-                        # #Set to false to preserve 8-bit color channels
-                        # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-                        #     color_temp_od3,
-                        #     depth_od3,
-                        #     depth_scale=1.0 / depth_scale,
-                        #     depth_trunc=clipping_distance_in_meters,
-                        #     convert_rgb_to_intensity=False)
-                        
-                        # temp = o3d.geometry.PointCloud.create_from_rgbd_image(
-                        #     rgbd_image, intrinsic)
-                        # temp.transform(flip_transform)
-                        
-                        # #print("Number of points", (np.asarray(temp.points).shape))
-                        # #Assign values
-                        # pcd.points = temp.points
-                        # pcd.colors = temp.colors
-                        
-                    
-                        # """ICP Registration"""
-                        # #Use the preregistration to speed up ICP
-                        # T = pre_reg
-                        # T=np.matmul(flip_transform,T)
-
-
-                        # threshold = 80/100  # [m] 	Maximum correspondence points-pair distance
-                        # reg_p2p = o3d.pipelines.registration.registration_icp(
-                        #     source_temp, pcd, threshold, T,
-                        #     o3d.pipelines.registration.TransformationEstimationPointToPoint(),
-                        #     o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
-                        # print("ICP evalutation",reg_p2p)
-                        # print("Transformation is:")
-                        # print(reg_p2p.transformation)
-
-                        # """Get Registered  PC"""
-                        
-                        # #assembly_temp.transform(reg_p2p.transformation)
-                        
-                        # #Sking (Back) ONLY- WOKRS
-                        # source_icp =source_temp.transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
-
-                        # assembly_icp=assembly_temp.transform(reg_p2p.transformation).paint_uniform_color([1,0, 0])
-                        
-                        
-                        
-                        # #Generate Grid Path
-                        # """p2=id_tvec[0]
-                        # p3=id_tvec[2]
-                        # p1=id_tvec[3]
-                       
-                        # w=2
-                        # l=3
-                        
-                        # path=[]
-                        # for i in range(l+1):
-                        #     for j in range(w+1):
-                        #         #print("i",i,"j",j)
-                        #         path.append(p1+i/l*(p3-p1)+j/w*(p2-p1))
-                        
-                        # # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
-                        # #path_pc = o3d.geometry.PointCloud()
-                        # path_pc.points = o3d.utility.Vector3dVector(path)
-                        # #Color
-                        # path_pc.paint_uniform_color([1.0, 0.0, 1.0])
-                        # #calculate Normals
-                        # #enter 'n' in keyboard to see normals
-                        # path_pc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.01, max_nn=30))
-                        # path_pc.transform(flip_transform)
-                        
-                        # start_point = 4
-                        # end_point = 7
-
-                        # trajectory = gettrajectory(start_point, end_point, w, l, path)"""
-
-
-                        
-                        # #"""Visualize"""
-                       
-                        # if frame_count == 0:
-                        #     vis.add_geometry(pcd)
-                        #     vis.add_geometry(assembly_icp)
-                        #     ##vis.add_geometry(source_icp)
-                        #     #vis.add_geometry(path_pc)
-                        
-                        
-                        # #Update_geometry
-                        # vis.update_geometry(pcd)
-                        # vis.update_geometry(assembly_icp)
-                        # #vis.update_geometry(source_temp)
-                        # vis.update_geometry(source_icp)
-                        # #vis.update_geometry(path_pc)
-                        
-                        # #Render new frame
-                        # vis.poll_events()
-                        # vis.update_renderer()
-                        
-                        # process_time = datetime.now() - dt0
-                        # print("FPS: " + str(1 / process_time.total_seconds()))
-                        # frame_count += 1
-                        # #frame_count=True
                         
                         """if keyboard.is_pressed('Enter'):
                             
@@ -520,7 +423,7 @@ if __name__ == "__main__":
     print('------x_vec----')
     print(x_vec)
     
-    t=np.array(range(n_read))
+    
     # fig1 = plt.figure()
     # plt.plot(t, x_vec[:, 0])
     # plt.plot(t, x_vec[:, 1])
@@ -533,43 +436,148 @@ if __name__ == "__main__":
     # #fig.show()
     # print("stop")
 
+    t = np.array(range(n_read))
 
-
-    fig2, ax2 = plt.subplots()
-    l0,=ax2.plot(t,  x_vec[:, 0]*1000)
-    l1,=ax2.plot(t,  x_vec[:, 1]*1000)
-    l2,=ax2.plot(t,  x_vec[:, 2]*1000)
-    l3,=ax2.plot(t,  x_vec[:, 3]*1000)
+    figxplot, ax2 = plt.subplots()
+    lx0,=ax2.plot(t,  x_vec[:, 0]*1000)
+    lx1,=ax2.plot(t,  x_vec[:, 1]*1000)
+    lx2,=ax2.plot(t,  x_vec[:, 2]*1000)
+    lx3,=ax2.plot(t,  x_vec[:, 3]*1000)
     
     ax2.set(xlabel='samples', ylabel='X Position (mm)',title='Detected ArUco Marker X Postition')
-    ax2.legend((l0, l1, l2, l3), (str(arucoIDs[0]), str(arucoIDs[1]), str(arucoIDs[2]), str(arucoIDs[0])),
+    ax2.legend((lx0, lx1, lx2, lx3), (str(arucoIDs[0]), str(arucoIDs[1]), str(arucoIDs[2]), str(arucoIDs[3])),
                loc='upper right', shadow=True)
     
     #ax2.grid()
     #plt.ticklabel_format(axis='both', style='sci', scilimits=(3,3))
     plt.ticklabel_format(axis='y', style='sci', scilimits=(3,3))
 
-    fig2.savefig("test2.png")
+    figxplot.savefig("XpositionAruco.png")
     plt.show()
     
-    figx, axs = plt.subplots(2, 2)
+    print("-----Mean Xvector in [mm]-------")
+    xmean=np.mean(x_vec,axis=0)*1000
+    print(xmean)
+    print("-----STD Xvector in [mm]-------")
+    xstd=np.mean(x_vec,axis=0)*1000
+    print(xstd)
+    
+    
+    
+    #plot y vectors
+    figyplot, ax3 = plt.subplots()
+    ly0,=ax3.plot(t,  y_vec[:, 0]*1000)
+    ly1,=ax3.plot(t,  y_vec[:, 1]*1000)
+    ly2,=ax3.plot(t,  y_vec[:, 2]*1000)
+    ly3,=ax3.plot(t,  y_vec[:, 3]*1000)
+    
+    ax3.set(xlabel='samples', ylabel='Y Position (mm)',title='Detected ArUco Marker Y Postition')
+    ax3.legend((ly0, ly1, ly2, ly3), (str(arucoIDs[0]), str(arucoIDs[1]), str(arucoIDs[2]), str(arucoIDs[3])),
+               loc='upper right', shadow=True)
+    
+    #ax2.grid()
+    #plt.ticklabel_format(axis='both', style='sci', scilimits=(3,3))
+    plt.ticklabel_format(axis='y', style='sci', scilimits=(3,3))
 
+    figyplot.savefig("YpositionAruco.png")
+    plt.show()
+    
+    print("-----Mean Yvector-------")
+    ymean = np.mean(y_vec, axis=0)*1000
+    print(xmean)
+    print("-----STD Yvector-------")
+    ystd = np.mean(y_vec, axis=0)*1000
+    print(ystd)
+    
+    
+    
+
+    #plot z vectors
+    figzplot, ax4 = plt.subplots()
+    lz0, = ax4.plot(t,  z_vec[:, 0]*1000)
+    lz1, = ax4.plot(t,  z_vec[:, 1]*1000)
+    lz2, = ax4.plot(t,  z_vec[:, 2]*1000)
+    lz3, = ax4.plot(t,  z_vec[:, 3]*1000)
+
+    ax4.set(xlabel='samples', ylabel='Z Position (mm)',
+            title='Detected ArUco Marker Z Postition')
+    ax4.legend((lz0, lz1, lz2, lz3), (str(arucoIDs[0]), str(arucoIDs[1]), str(arucoIDs[2]), str(arucoIDs[3])),
+               loc='upper right', shadow=True)
+
+    #ax2.grid()
+    #plt.ticklabel_format(axis='both', style='sci', scilimits=(3,3))
+    plt.ticklabel_format(axis='y', style='sci', scilimits=(3, 3))
+
+    figzplot.savefig("ZpositionAruco.png")
+    plt.show()
+    
+    print("-----Mean Zvector in [mm]-------")
+    zmean = np.mean(z_vec, axis=0)*1000
+    print(zmean)
+    print("-----STD Zvector in [mm]-------")
+    zstd = np.mean(z_vec, axis=0)*1000
+    print(zstd)
+    
+    
+    
+    #X BoxPlots  
+    
+    figx, axs = plt.subplots(2, 2)
     # basic plot
     axs[0, 0].boxplot(x_vec[:, 0]*1000)
-    axs[0, 0].set_title('basic plot')
+    axs[0, 0].set_title(' Marker ID' + str(arucoIDs[0]))
 
     axs[0, 1].boxplot(x_vec[:, 1]*1000)
-    axs[0, 1].set_title('basic plot')
+    axs[0, 1].set_title(' Marker ID'+str(arucoIDs[1]))
     
     axs[1, 0].boxplot(x_vec[:, 3]*1000)
-    axs[1, 0].set_title('basic plot')
+    axs[1, 0].set_title('Marker ID'+str(arucoIDs[3]))
     
     axs[1, 1].boxplot(x_vec[:, 2]*1000)
-    axs[1, 1].set_title('basic plot')
+    axs[1, 1].set_title('Marker ID'+str(arucoIDs[2]))
     
-    figx.savefig("testx.png")
+    figx.savefig("Boxplot_x.png")
     
     
+    #y BoxPlots
+
+    figy, axsy = plt.subplots(2, 2)
+    # basic plot
+    axsy[0, 0].boxplot(y_vec[:, 0]*1000)
+    axsy[0, 0].set_title('Y position of Marker ID'+str(arucoIDs[0]))
+
+    axsy[0, 1].boxplot(y_vec[:, 1]*1000)
+    axsy[0, 1].set_title('Y position of Marker ID'+str(arucoIDs[1]))
+
+    axsy[1, 0].boxplot(y_vec[:, 3]*1000)
+    axsy[1, 0].set_title('Y position of Marker ID'+str(arucoIDs[3]))
+
+    axsy[1, 1].boxplot(y_vec[:, 2]*1000)
+    axsy[1, 1].set_title('Y position of Marker ID'+str(arucoIDs[2]))
+
+    figy.savefig("Boxplot_y.png")
+    
+    #y BoxPlots
+
+    figz, axsz = plt.subplots(2, 2)
+    # basic plot
+    axsz[0, 0].boxplot(z_vec[:, 0]*1000)
+    axsz[0, 0].set_title('Z position of Marker ID'+str(arucoIDs[0]))
+
+    axsz[0, 1].boxplot(z_vec[:, 1]*1000)
+    axsz[0, 1].set_title('Z position of Marker ID'+str(arucoIDs[1]))
+
+    axsz[1, 0].boxplot(z_vec[:, 3]*1000)
+    axsz[1, 0].set_title('Z position of Marker ID'+str(arucoIDs[3]))
+
+    axsz[1, 1].boxplot(z_vec[:, 2]*1000)
+    axsz[1, 1].set_title('Z position of Marker ID'+str(arucoIDs[2]))
+
+    figz.savefig("Boxplot_z.png")
+    
+    
+
+
     #data_to_plot = np.random.rand(100, 5)
     # positions = np.arange(4) + 1
 
