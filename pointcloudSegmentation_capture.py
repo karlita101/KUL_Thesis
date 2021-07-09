@@ -350,8 +350,8 @@ if __name__ == "__main__":
                                 id_rvec[0], id_tvec[0], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
                                 # #Get center pixel coordinates
-                                # print("------SHAPE OF ALL CORNER--------")
-                                # center = corn_sq[i, :, :]
+                                print("------SHAPE OF ALL CORNER--------")
+                                center = corn_sq[i, :, :]
                                 # print(center)
                                 # print(center.shape)
                                 # print("--------Mean of pixel coordinates to get center")
@@ -425,13 +425,15 @@ if __name__ == "__main__":
                             #print('id_tvecs shape',id_tvec.shape)
                             
                             #Jul 07: Use to check if the RS depth ant Z-tvec corresponse for the center pixel
-                            # print("----- Marker 1 RS depth value-------")
-                            # coord=np.mean(center, axis=0).astype(int)
-                            # print([coord[1],coord[0]])
-                            # d = depth_image[coord[1], coord[0]]
-                            # print('d',d)
-                            # print(d*depth_scale)
-                            # # print(depth_image[297, 241]*depth_scale)
+                            print("----- Marker 1 RS depth value-------")
+                            #Right now only marker
+                            coord=np.mean(center, axis=0).astype(int)
+                            print([coord[1],coord[0]])
+                            d = depth_image[coord[1], coord[0]]
+                            print('d',d)
+                            print(d*depth_scale)
+                            print(id_tvec[0,2])
+                            print("error in depth in mm", (d*depth_scale-id_tvec[0,2])*1000)
                             
                             #Subtract vectors
                             difb_01 = id_tvec[0]-id_tvec[1]
@@ -483,8 +485,6 @@ if __name__ == "__main__":
                             
                             read+=1
 
-                            
-                        
                             #Assign to array
                             ##JULY7: norm_ARUCO=np.array([normb_01,normb_12])
                             # print("norm CAD from 1 to 2",norma_12)
@@ -612,6 +612,10 @@ if __name__ == "__main__":
                             if frame_count == 0:
                                 vis.add_geometry(pcd)
                                 vis.add_geometry(assemb_pcd)
+                                
+                                #try something else for conditional viewing:
+                                
+                                
                                 #vis.add_geometry(source_pcd)
                                 #vis.add_geometry(path_pc)
                             
