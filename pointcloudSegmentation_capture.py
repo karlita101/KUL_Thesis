@@ -227,9 +227,13 @@ if __name__ == "__main__":
     #Initialize Polygon Corners
     poly_corners = [None]*4
     
+        
     #Create empty lists to store marker translation and rotation vectors
     id_rvec=[None]*4
     id_tvec=[None]*4
+    
+    #Create empty list to hold pixels coordinates for aruco origing
+    aruco_originpixels=[None]*4
     
     # Create a pipeline
     pipeline = rs.pipeline()
@@ -253,7 +257,7 @@ if __name__ == "__main__":
 
     # Get depth sensor's depth scale
     depth_scale = depth_sensor.get_depth_scale()
-    print("Depth Scale is: ", depth_scale)
+    #print("Depth Scale is: ", depth_scale)
 
     # We will not display the background of objects more than clipping_distance_in_meters meters away
     clipping_distance_in_meters = 3  # 3 meter
@@ -352,6 +356,8 @@ if __name__ == "__main__":
                                 # #Get center pixel coordinates
                                 print("------SHAPE OF ALL CORNER--------")
                                 center = corn_sq[i, :, :]
+                                
+                                aruco_originpixels[0] = np.mean(corn_sq[i, :, :], axis=0).astype(int)
                                 # print(center)
                                 # print(center.shape)
                                 # print("--------Mean of pixel coordinates to get center")
@@ -361,14 +367,24 @@ if __name__ == "__main__":
                                 poly_corners[1] = corn_sq[i, 1, :]
                                 id_rvec[1], id_tvec[1], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
+                                
+                                #get center locations
+                                aruco_originpixels[1] = np.mean(corn_sq[i, :, :], axis=0).astype(int)
+                                
                             elif id == arucoIDs[2]:
                                 poly_corners[2] = corn_sq[i, 2, :]
                                 id_rvec[2], id_tvec[2], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
+                                
+                                aruco_originpixels[2] = np.mean(corn_sq[i, :, :], axis=0).astype(int)
+                                
                             elif id == arucoIDs[3]:
                                 poly_corners[3] = corn_sq[i, 3, :]
                                 id_rvec[3], id_tvec[3], markerPoints = aruco.estimatePoseSingleMarkers(
                                     corners[i], markerlen, camera_matrix, dist_coef)
+                                
+                                aruco_originpixels[3] = np.mean(corn_sq[i, :, :], axis=0).astype(int)
+                                
                             elif id == toolID:
                                 
                                 #Flag that the tool exist!
@@ -429,12 +445,42 @@ if __name__ == "__main__":
                             #Right now only marker
                             coord=np.mean(center, axis=0).astype(int)
                             print([coord[1],coord[0]])
+                            #[1], [0] = is to v,u since we need to index row then col in np
                             d = depth_image[coord[1], coord[0]]
                             print('d',d)
                             print(d*depth_scale)
                             print(id_tvec[0,2])
                             print("error in depth in mm", (d*depth_scale-id_tvec[0,2])*1000)
                             
+                            x = (coord[0]-camera_matrix[0,2])*d*depth_scale/camera_matrix[0,0]
+                            y=(coord[1]-camera_matrix[1,2])*d*depth_scale/camera_matrix[1,1]
+
+                            print("------verify----- RS with ARUCO-----in MM!-----")
+                            print("aruco",id_tvec[0,:]*1000)
+                            print([x*1000,y*1000,d*depth_scale*1000])
+                            print("DIF",id_tvec[0,:]*1000-[x*1000,y*1000,d*depth_scale*1000])
+                        
+                            rs_tvec=[None]*4
+                            for i in range(4):
+                                coord = aruco_originpixels[i]
+                                print("-----coord------",coord)
+                                d= depth_image[coord[1], coord[0]]*depth_scale
+                                x = (coord[0]-camera_matrix[0,2])*d/camera_matrix[0,0]
+                                y=(coord[1]-camera_matrix[1,2])*d/camera_matrix[1,1]
+                                
+                                rs_tvec[i]=[x,y,d]
+                                
+                            
+                            dif_rsAruco=(id_tvec-rs_tvec)*1000
+                            print(dif_rsAruco)
+
+
+
+
+
+
+
+
                             #Subtract vectors
                             difb_01 = id_tvec[0]-id_tvec[1]
                             difb_12 = id_tvec[1]-id_tvec[2]
