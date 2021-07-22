@@ -1,3 +1,9 @@
+#Get Registration matrix from the validation data
+#check that they are similar!
+
+#YES THEY ARE!
+
+
 import numpy as np
 from glob import glob
 from sourcetargetregistration import *
@@ -5,7 +11,7 @@ import json
 import vtk
 
 """Get Kuka JSON Positions: Source"""
-kuka_reg_json = (r"C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210720 Evaluation Testing\cal_poses_calibrationdata_.json")
+kuka_reg_json = (r"C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210720 Evaluation Testing\cal_poses_validation.json")
 with open(kuka_reg_json) as json_file:
     data = json.load(json_file)
     Nlist = []
@@ -15,14 +21,12 @@ with open(kuka_reg_json) as json_file:
         Nlist.append(cur)
         
 Nlist=np.array(Nlist)
-print("------JSON-----")
-print(Nlist)
 
 """"Get Recorded Aruco Positions"""
 #First checked that all matrices  were of shape (4,3) no points missing
 #Also manually checked that the values were within the same values
 
-file_names = glob('./210720 Evaluation Testing/karla data/Calibration data/*')
+file_names = glob('./210720 Evaluation Testing/karla data/Validation data/*')
 
 print(len(file_names))
 count = 0
@@ -62,5 +66,5 @@ print(registration)
 
 
 """"Save Registration Matrix"""
-np.save('./210720 Evaluation Testing/Regmat_kuka2aruco_in_m_withoutprecision',registration)
+np.save('./210720 Evaluation Testing/Regmat_kuka2aruco_Validation_data',registration)
 #np.save('./210624PilotTestAngles60/Angle30/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
