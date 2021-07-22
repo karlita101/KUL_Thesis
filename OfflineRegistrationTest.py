@@ -66,7 +66,7 @@ def invertMat(transformation):
 #Upper surface
 source = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineModelKR_V12UpperSurface.PLY')
 
-
+o3d.visualization.draw_geometries([source])
 
 #Target= PC from RealSense
 #target = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210512 Debug Reg 2_feedback\CaptureBackFrameDEBUG_PLY30.ply')
@@ -79,9 +79,68 @@ target = o3d.io.read_point_cloud(
 pre_reg = np.load(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210624PilotTestAngles60\Angle30\preregmat\preregT2443.npy')
 
 
+assembly = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\SpineBack_Assembly_KR_rev2.PLY')
+
+o3d.visualization.draw_geometries([assembly])
+
+
+
+voxel_size=1/100 # 1cm
+down_assembly = assembly.voxel_down_sample(voxel_size)
+down_assembly.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=2*voxel_size, max_nn=30))
+o3d.visualization.draw_geometries([down_assembly])
+
+
+
+""" Visualize the mock tool"""
+#July 8
+flip_transform = [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
+tool = o3d.io.read_point_cloud(r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\0708MockInstrument_rev1_PLY.PLY')
+#tool.transform(flip_transform)
+o3d.visualization.draw_geometries([tool])
+
+
+#read tool mesh
+tool_mesh = o3d.io.read_triangle_mesh(
+    r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\0708MockInstrument_rev1_PLY.PLY')
+
+o3d.visualization.draw_geometries([tool_mesh])
+
+
+
+
+
+
+
+
+
+
 o3d.visualization.draw_geometries([target])
 
 
+mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
+mesh_r = copy.deepcopy(mesh)
+R = mesh.get_rotation_matrix_from_xyz((0, np.pi, np.pi))
+R_trans=np.transpose(R)
+print(R_trans)
+
+mesh_r.rotate(R, center=(0, 0, 0))
+o3d.visualization.draw_geometries([mesh, mesh_r,target])
+
+
+PC_coordframe = o3d.geometry.TriangleMesh.create_coordinate_frame()
+PC_coordframe_r = copy.deepcopy(mesh)
+R = mesh.get_rotation_matrix_from_xyz((0, np.pi, np.pi))
+PC_coordframe_r.rotate(R, center=(0, 0, 0))
+o3d.visualization.draw_geometries([mesh, mesh_r, target])
+
+
+
+
+
+
+assembly.paint_uniform_color([112/255, 136/255, 153/255])
+o3d.visualization.draw_geometries([assembly])
 
 """Again but witht the preregistration"""
 
@@ -157,6 +216,7 @@ print("Transformation is:")
 print(reg_p2p.transformation)
 
 source_icp =copy.deepcopy(source_temp).transform(reg_p2p.transformation).paint_uniform_color([0, 0.651, 0.929])
+
 o3d.visualization.draw_geometries([source_temp,reg_source,target])
 o3d.visualization.draw_geometries([reg_source, target])
 
@@ -178,9 +238,6 @@ dist_icp = np.asarray(dist_icp)*1000  # to get in [mm]
 # ax2 = dist_pd_icp.plot(kind="hist", alpha=0.5, bins=1000)  # HISTOGRAM
 # ax3 = dist_pd_icp.plot(kind="line")  # SERIES
 # plt.show()
-
-
-
 
 
 
@@ -269,3 +326,17 @@ plt.show()
 
 
 
+## apply the same transformation to the assembly
+
+#assembly_temp=copy.deepcopy(assembly)
+assembly_temp=copy.deepcopy(down_assembly)
+
+#dt0 = datetime.now()
+assembly_icp =assembly_temp.transform(reg_p2p.transformation)
+#process_time = datetime.now() - dt0
+#print("FPS: " + str(1 / process_time.total_seconds()))
+#o3d.visualization.draw_geometries([assembly, assembly_icp, target])
+#o3d.visualization.draw_geometries([assembly_icp, target])
+o3d.visualization.draw_geometries([assembly_icp])
+
+o3d.visualization.draw_geometries([assembly_temp, reg_source, target])

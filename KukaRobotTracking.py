@@ -9,7 +9,6 @@ import cv2.aruco as aruco
 import os
 import keyboard
 
-
 from preregistration import *
 
 class Preset(IntEnum):
@@ -48,7 +47,8 @@ if __name__ == "__main__":
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_1000)
     
     #marker length
-    markerlen = 3.19/100
+    #3.19
+    markerlen = 2/100
     #Drawn axis length
     axis_len = 0.02
 

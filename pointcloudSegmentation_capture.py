@@ -405,6 +405,7 @@ if __name__ == "__main__":
                                 Rxyz=eulerAnglesToRotationMatrix(angles)
                                 
                                 """Get Aruco --->PC Transform Matrix"""
+                                #Inverse T
                                 #Tranpose of Rxyz
                                 Rxyz_trans=np.transpose(Rxyz)
                                 Txyz = getmattransform(Rxyz_trans, np.zeros(3))
