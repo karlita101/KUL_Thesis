@@ -39,18 +39,20 @@ file_names = glob('./210720 Evaluation Testing/karla data/Calibration_Precision 
 arrays = [np.load(f)/1000 for f in file_names]
 
 print("arrays being used")
-print(arrays)
-
-reg_arr = [initialAlignment(source, arr) for arr in arrays]
+#print(arrays)
 
 
 print("----------------------- GET REGISTRATION MATRICES-----------------")
+#210723: Now we want to get Aruco to KUKA So we switch the order of source and target
+reg_arr = [initialAlignment(arr, source) for arr in arrays]
 print(np.shape(reg_arr))
 #print(reg_arr)
 reg_arr = np.reshape(reg_arr, (5, 4, 4))
 
-print("----- LOAD Calibration Registration Matrix-------")
-regMat= np.load('./210720 Evaluation Testing/Regmat_kuka2aruco_in_m_withoutprecision.npy')
+print("----- LOAD Calibration Registration Matrix for Aruco to Kuka-------")
+
+#load the Aruco to Kuka registration matrix
+regMat = np.load('./210720 Evaluation Testing/Regmat_aruco2kuka_in_m_withoutprecision.npy')
 print("----- Calibration Registration Matrix-------")
 print(regMat)
 print("-----  Calibration Registration Roll, Pitch, Yaw in Degrees-------")

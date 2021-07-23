@@ -54,7 +54,7 @@ print(np.shape(target))
 print("-----shape of Source array-------")
 print(np.shape(source))
     
-"""Get Registration Matrix"""
+"""Get Kuka--> Aruco Registration Matrix"""
 #both have shape (128,3)
 registration = initialAlignment(source, target)
 print("-------REG KUKA to ARUCO ----------")
@@ -63,4 +63,16 @@ print(registration)
 
 """"Save Registration Matrix"""
 np.save('./210720 Evaluation Testing/Regmat_kuka2aruco_in_m_withoutprecision',registration)
+#np.save('./210624PilotTestAngles60/Angle30/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
+
+
+"""Get Aruco---> Kulka Registration Matrix"""
+#both have shape (128,3)
+registration_aruco2kuka = initialAlignment(target, source)
+print("-------REG ARUCO to KUKA ----------")
+print(registration_aruco2kuka)
+
+
+""""Save Aruco---> Kulka Registration Matrix"""
+np.save('./210720 Evaluation Testing/Regmat_aruco2kuka_in_m_withoutprecision', registration_aruco2kuka)
 #np.save('./210624PilotTestAngles60/Angle30/arucotvec/'+'id_tvec'+str(frame_count), id_tvec)
