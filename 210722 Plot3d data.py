@@ -62,14 +62,17 @@ def getkukaequivalent(regmatrix, file_names):
 
 
 regmatrix = np.load('./210720 Evaluation Testing/Regmat_aruco2kuka_in_m_withoutprecision.npy')
-file_names_val = glob('./210720 Evaluation Testing/karla data/Validation data/*')
 
+file_names_val = glob('./210720 Evaluation Testing/karla data/Validation data/*')
 kuka_equiv_validation=getkukaequivalent(regmatrix,file_names_val)
 
 
 file_names_calib = glob('./210720 Evaluation Testing/karla data/Calibration data/*')
 kuka_equiv_calibration = getkukaequivalent(regmatrix, file_names_calib)
 
+
+file_names_repeat = glob('./210720 Evaluation Testing/karla data/Calibration_Precision data/*')
+kuka_equiv_repeat = getkukaequivalent(regmatrix, file_names_repeat)
 
 """Get Kuka JSON Positions: Source"""
 kuka_reg_json = (r"C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\210720 Evaluation Testing\cal_poses_calibrationdata_.json")
@@ -133,25 +136,7 @@ plt.show()
 
 
 
-""""Calculate Validation RMSE """
-# in METERS
-# diff_validation = [Nlist_val-trial for trial in kuka_equiv_validation]
-
-# diff_validation=np.array(diff_validation)
-# mse = np.square(diff_validation)
-# # print(np.shape(diff_validation))
-# print(mse[:,0,:])    
-
-# print(np.square(np.subtract(Nlist_val[0], kuka_equiv_validation[:, 0, :])))
-# print(len(Nlist_val))
-
-# print(np.sum(np.square(np.subtract(Nlist_val[0],kuka_equiv_validation[:, 0, :])),axis=1))
-# print(np.mean(np.sum(np.square(np.subtract(Nlist_val[0], kuka_equiv_validation[:, 0, :])), axis=1),axis=0))
-
-# print(np.sum(np.sum(np.square(np.subtract(
-#     Nlist_val[0], kuka_equiv_validation[:, 0, :])), axis=1), axis=0)/len(Nlist_val))
-
-# print("hello")
+""""Calculate Validation RMSE Validation """
 
 #Get in mm
 Nlist_val_mm=Nlist_val*1000
@@ -179,7 +164,37 @@ print("--------------RMSE of Validation in mm-----------------")
 print(RMSE_val)
 
 
-print("-----------position of equivalent validation in mm -------------")
-print(kuka_equiv_validation*1000)
-print(" vs Nlist validation in mm")
-print(Nlist_val*1000)
+
+
+"""Calculate Calibration RMSE on Repeatibility Study Data """
+print("--note we are using the calibration JSON-----")
+#Get in mm
+Nlist_mm = Nlist*1000
+kuka_equiv_repeat_mm = kuka_equiv_repeat*1000
+
+RMSE_repeat = np.empty(len(Nlist))
+RMSE_repeat[0] = np.sqrt(np.mean(np.sum(np.square(np.subtract(
+    Nlist_mm[0], kuka_equiv_repeat_mm[:, 0, :])), axis=1), axis=0))
+
+# print(np.subtract(Nlist_val_mm[0], kuka_equiv_validation_mm[:, 0, :]))
+
+RMSE_repeat[1] = np.sqrt(np.mean(np.sum(np.square(np.subtract(
+    Nlist_mm[1], kuka_equiv_repeat_mm[:, 1, :])), axis=1), axis=0))
+
+RMSE_repeat[2] = np.sqrt(np.mean(np.sum(np.square(np.subtract(
+    Nlist_mm[2], kuka_equiv_repeat_mm[:, 2, :])), axis=1), axis=0))
+
+RMSE_repeat[3] = np.sqrt(np.mean(np.sum(np.square(np.subtract(
+    Nlist_mm[3], kuka_equiv_repeat_mm[:, 3, :])), axis=1), axis=0))
+
+
+RMSE_repeat = np.array(RMSE_repeat)
+
+print("--------------RMSE of Validation in mm-----------------")
+print(RMSE_repeat)
+
+print("done!")
+# print("-----------position of equivalent validation in mm -------------")
+# print(kuka_equiv_validation*1000)
+# print(" vs Nlist validation in mm")
+# print(Nlist_val*1000)

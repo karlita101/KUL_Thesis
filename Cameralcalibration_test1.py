@@ -23,7 +23,7 @@ import glob
 import keyboard 
 
 
-def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
+def drawchessboard(square_size, width, height,dirpath2, prefix, image_format):
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
@@ -37,7 +37,7 @@ def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
     objpoints = [] # 3d point in real world space
     imgpoints = [] # 2d points in image plane.
 
-    stat_images = glob.glob(dirpath+'/' + prefix + '*.' + image_format)
+    stat_images = glob.glob(dirpath2+'/' + prefix + '*.' + image_format)
     ##print(len(stat_images))
     #Start counter for images used
     found_img=0
@@ -70,17 +70,32 @@ def drawchessboard(square_size, width, height,dirpath, prefix, image_format):
     # Get camera matrix, distortion coefficients, rotation and translation vector.  
     rms, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
     
+    
+    print("---------GOT THE CAMER PARAMETERS!-------------")
     #undistort (Added 28.10.2020)
-    undistort(stat_images,mtx,dist)
+    #undistort(stat_images,mtx,dist)
+    
+    
+    #210724 add  error calc
+    mean_error = 0
+    for i in range(len(objpoints)):
+        imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+        error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+        mean_error += error
+    #print( "total error: {}".format(mean_error/len(objpoints)) )
+    print("total error", mean_error/len(objpoints))
+    
     return [rms, mtx, dist, rvecs, tvecs, stat_images]
 
     #cv2.destroyAllWindows()
 
-def save_coefficients(mtx, dist, dirpath):
+def save_coefficients(mtx, dist, rvecs,tvecs, dirpath2):
     """ Save the camera matrix and the distortion coefficients to given path/file. """
-    cv_file = cv2.FileStorage(dirpath+'/'+'calibration.txt', cv2.FILE_STORAGE_WRITE)
+    cv_file = cv2.FileStorage(dirpath2+'/'+'calibration210731.txt', cv2.FILE_STORAGE_WRITE)
     cv_file.write("K", mtx)
     cv_file.write("D", dist)
+    cv_file.write("R", rvecs)
+    cv_file.write("t", tvecs)
     # note you *release* you don't close() a FileStorage object
     cv_file.release()
 
@@ -121,9 +136,11 @@ def undistort(stat_images,mtx,dist):
 #dirpath = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
 
 #second calibration. Make sure to update path directory when calling coefficients
-dirpath = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis\Calibration2'
+#dirpath = r'C:\Users\karla\OneDrive\Documents\GitHub\KUL_Thesis'
+dirpath2 = r'D:\Thesis Absolete Folders\Calibration Images'
 
-# Configure depth and color streams
+
+"""# Configure depth and color streams
 pipeline = rs.pipeline()
 config = rs.config()
 fps=30
@@ -177,7 +194,7 @@ finally:
     pipeline.stop()
     print("Pipeline has been stopped")
     print('Count images',  count)
-    
+    """
 
 ######################################################################################
 # EXECUTE CALIBRATION
@@ -189,7 +206,8 @@ width=8
 height=6
 image_format='png'
 prefix='Image'
-rms, mtx, dist, rvecs, tvecs, stat_images= drawchessboard(square_size, width, height,dirpath, prefix, image_format)
+rms, mtx, dist, rvecs, tvecs, stat_images= drawchessboard(square_size, width, height,dirpath2, prefix, image_format)
 
 #Save coefficients
-save_coefficients(mtx, dist, dirpath)
+#save_coefficients(mtx, dist, dirpath2)
+save_coefficients(mtx, dist, rvecs, tvecs, dirpath2)
